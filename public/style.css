@@ -1,5 +1,9 @@
 * { box-sizing: border-box; }
 
+/* Das hidden-Attribut muss sich gegen die display-Regeln durchsetzen,
+   sonst funktioniert das Umschalten zwischen Login- und Spielansicht nicht. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   min-height: 100vh;
