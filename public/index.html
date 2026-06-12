@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ultima IV – Quest of the Avatar</title>
+  <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Anmeldung / Registrierung -->
+  <section id="auth-screen" class="screen">
+    <div class="auth-box">
+      <h1>Ultima IV</h1>
+      <p class="subtitle">Quest of the Avatar – im Browser</p>
+
+      <form id="auth-form">
+        <label for="username">Benutzername</label>
+        <input id="username" name="username" autocomplete="username" required
+               minlength="3" maxlength="32" pattern="[A-Za-z0-9_.\-]+" />
+
+        <label for="password">Passwort</label>
+        <input id="password" name="password" type="password"
+               autocomplete="current-password" required minlength="6" />
+
+        <p id="auth-error" class="error" hidden></p>
+
+        <div class="buttons">
+          <button type="submit" data-action="login">Anmelden</button>
+          <button type="submit" data-action="register" class="secondary">Registrieren</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Spielseite -->
+  <section id="game-screen" class="screen" hidden>
+    <header id="topbar">
+      <span id="player-name"></span>
+      <span id="save-info"></span>
+      <span class="spacer"></span>
+      <button id="save-btn" disabled>Spielstand speichern</button>
+      <button id="download-btn" class="secondary">Backup laden</button>
+      <button id="reset-btn" class="secondary">Spielstand löschen</button>
+      <button id="logout-btn" class="secondary">Abmelden</button>
+    </header>
+
+    <div id="game-container">
+      <div id="dos"></div>
+      <div id="game-message" hidden></div>
+    </div>
+
+    <footer id="hint">
+      Tipp: Zuerst im Spiel speichern (in Ultima IV: <kbd>Q</kbd> = Quit &amp; Save
+      auf der Oberwelt), dann oben auf „Spielstand speichern“ klicken, damit der
+      Stand auf dem Server landet.
+    </footer>
+  </section>
+
+  <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

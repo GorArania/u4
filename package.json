@@ -1,0 +1,18 @@
+{
+  "name": "u4-web",
+  "version": "0.1.0",
+  "description": "Ultima IV im Browser: js-dos-Frontend mit Node.js-Server, Anmeldung und Spielstand-Speicherung pro Benutzer (SQLite)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "better-sqlite3": "^11.10.0",
+    "express": "^4.21.2"
+  }
+}

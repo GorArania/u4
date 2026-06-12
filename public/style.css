@@ -1,0 +1,126 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #14101e;
+  color: #e8e2d0;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.screen { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ---------- Anmeldung ---------- */
+
+#auth-screen { align-items: center; justify-content: center; }
+
+.auth-box {
+  width: min(380px, 90vw);
+  padding: 2rem;
+  background: #1f1830;
+  border: 1px solid #4a3c6e;
+  border-radius: 8px;
+}
+
+.auth-box h1 {
+  margin: 0;
+  text-align: center;
+  font-size: 2.4rem;
+  letter-spacing: 0.1em;
+  color: #d8b94a;
+}
+
+.subtitle {
+  margin: 0.25rem 0 1.5rem;
+  text-align: center;
+  font-style: italic;
+  color: #9d92b8;
+}
+
+form { display: flex; flex-direction: column; gap: 0.4rem; }
+label { font-size: 0.9rem; color: #9d92b8; }
+
+input {
+  padding: 0.5rem;
+  margin-bottom: 0.6rem;
+  background: #14101e;
+  border: 1px solid #4a3c6e;
+  border-radius: 4px;
+  color: #e8e2d0;
+  font-size: 1rem;
+}
+
+.buttons { display: flex; gap: 0.6rem; margin-top: 0.4rem; }
+
+button {
+  flex: 1;
+  padding: 0.55rem 0.9rem;
+  background: #d8b94a;
+  border: none;
+  border-radius: 4px;
+  color: #14101e;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button.secondary { background: #4a3c6e; color: #e8e2d0; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.error { color: #e06c5a; font-size: 0.9rem; margin: 0.2rem 0; }
+
+/* ---------- Spielseite ---------- */
+
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  background: #1f1830;
+  border-bottom: 1px solid #4a3c6e;
+}
+
+#topbar button { flex: 0 0 auto; }
+#player-name { font-weight: bold; color: #d8b94a; }
+#save-info { font-size: 0.85rem; color: #9d92b8; }
+.spacer { flex: 1; }
+
+#game-container {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: #000;
+}
+
+#dos { width: 100%; height: 100%; }
+
+#game-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background: rgba(20, 16, 30, 0.92);
+  font-size: 1.1rem;
+  white-space: pre-line;
+}
+
+#hint {
+  padding: 0.5rem 0.8rem;
+  background: #1f1830;
+  border-top: 1px solid #4a3c6e;
+  font-size: 0.85rem;
+  color: #9d92b8;
+}
+
+kbd {
+  padding: 0 0.3em;
+  background: #14101e;
+  border: 1px solid #4a3c6e;
+  border-radius: 3px;
+  font-family: monospace;
+}
