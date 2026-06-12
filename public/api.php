@@ -227,6 +227,14 @@ session_set_cookie_params(array(
 session_start();
 
 $route = isset($_GET['r']) ? trim($_GET['r'], '/') : '';
+if ($route === '') {
+    // Fallback ohne Rewrite-Parameter: Route direkt aus der URL lesen
+    // (.../api/login, .../api/bundle, ...).
+    $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    if (is_string($path) && preg_match('#/api/([a-z]+)/?$#', $path, $m)) {
+        $route = $m[1];
+    }
+}
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($route === 'register' && $method === 'POST') {
