@@ -13,7 +13,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const gameMessage = document.getElementById('game-message');
 
 let dosProps = null; // Rückgabe von Dos(), für stop()
-let ci = null;       // js-dos CommandInterface, gesetzt sobald der Emulator läuft
+let dosCi = null;       // js-dos CommandInterface, gesetzt sobald der Emulator läuft
 
 async function api(path, options = {}) {
   const res = await fetch(path, options);
@@ -99,11 +99,11 @@ function startEmulator(saveStamp) {
     noCloud: true,
     onEvent: (event, arg) => {
       if (event === 'ci-ready') {
-        ci = arg;
+        dosCi = arg;
         saveBtn.disabled = false;
       }
       if (event === 'exit') {
-        ci = null;
+        dosCi = null;
         saveBtn.disabled = true;
       }
     },
@@ -112,7 +112,7 @@ function startEmulator(saveStamp) {
 
 async function stopGame() {
   saveBtn.disabled = true;
-  ci = null;
+  dosCi = null;
   if (dosProps) {
     try {
       await dosProps.stop();
@@ -126,11 +126,11 @@ async function stopGame() {
 // -------------------------------------------------------------- Spielstände
 
 saveBtn.addEventListener('click', async () => {
-  if (!ci) return;
+  if (!dosCi) return;
   saveBtn.disabled = true;
   saveBtn.textContent = 'Speichere …';
   try {
-    const changes = await ci.persist();
+    const changes = await dosCi.persist();
     const result = await api('api/save', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/octet-stream' },
@@ -141,7 +141,7 @@ saveBtn.addEventListener('click', async () => {
     alert(`Speichern fehlgeschlagen: ${err.message}`);
   } finally {
     saveBtn.textContent = 'Spielstand speichern';
-    saveBtn.disabled = !ci;
+    saveBtn.disabled = !dosCi;
   }
 });
 
