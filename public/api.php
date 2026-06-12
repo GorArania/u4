@@ -222,7 +222,7 @@ session_set_cookie_params(array(
     'path' => '/',
     'httponly' => true,
     'samesite' => 'Lax',
-    // Hinter HTTPS zusätzlich: 'secure' => true
+    'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
 ));
 session_start();
 
