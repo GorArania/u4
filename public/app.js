@@ -97,6 +97,9 @@ function startEmulator(saveStamp) {
     autoStart: true,
     theme: 'dark',
     noCloud: true,
+    // Der Standard-Kern ("dosbox") stürzt mit dem VGA-Upgrade ab
+    // ("index out of bounds"); DOSBox-X emuliert die Grafik korrekt.
+    backend: 'dosboxX',
     onEvent: (event, arg) => {
       if (event === 'ci-ready') {
         dosCi = arg;
