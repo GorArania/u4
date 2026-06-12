@@ -43,7 +43,7 @@ authForm.addEventListener('submit', async (event) => {
   const action = event.submitter ? event.submitter.dataset.action : 'login';
   authError.hidden = true;
   try {
-    await api(`/api/${action}`, {
+    await api(`api/${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -60,7 +60,7 @@ authForm.addEventListener('submit', async (event) => {
 
 logoutBtn.addEventListener('click', async () => {
   await stopGame();
-  await api('/api/logout', { method: 'POST' }).catch(() => {});
+  await api('api/logout', { method: 'POST' }).catch(() => {});
   gameScreen.hidden = true;
   authScreen.hidden = false;
   authForm.password.value = '';
@@ -69,7 +69,7 @@ logoutBtn.addEventListener('click', async () => {
 // ---------------------------------------------------------------- Spielstart
 
 async function enterGame() {
-  const me = await api('/api/me');
+  const me = await api('api/me');
   authScreen.hidden = true;
   gameScreen.hidden = false;
   playerName.textContent = me.username;
@@ -91,7 +91,7 @@ async function enterGame() {
 function startEmulator(saveStamp) {
   // Zeitstempel in der URL, damit js-dos nach jedem Speichern/Löschen das
   // frische Bundle lädt statt eines lokal zwischengespeicherten Standes.
-  const bundleUrl = `/api/bundle?v=${encodeURIComponent(saveStamp || 'neu')}`;
+  const bundleUrl = `api/bundle?v=${encodeURIComponent(saveStamp || 'neu')}`;
   dosProps = Dos(document.getElementById('dos'), {
     url: bundleUrl,
     autoStart: true,
@@ -131,7 +131,7 @@ saveBtn.addEventListener('click', async () => {
   saveBtn.textContent = 'Speichere …';
   try {
     const changes = await ci.persist();
-    const result = await api('/api/save', {
+    const result = await api('api/save', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/octet-stream' },
       body: changes,
@@ -146,7 +146,7 @@ saveBtn.addEventListener('click', async () => {
 });
 
 downloadBtn.addEventListener('click', async () => {
-  const res = await fetch('/api/save');
+  const res = await fetch('api/save');
   if (!res.ok) {
     alert('Es liegt noch kein Spielstand auf dem Server.');
     return;
@@ -162,7 +162,7 @@ downloadBtn.addEventListener('click', async () => {
 resetBtn.addEventListener('click', async () => {
   if (!confirm('Spielstand auf dem Server wirklich löschen?')) return;
   try {
-    await api('/api/save', { method: 'DELETE' });
+    await api('api/save', { method: 'DELETE' });
     await stopGame();
     await enterGame();
   } catch (err) {
@@ -173,7 +173,7 @@ resetBtn.addEventListener('click', async () => {
 // Beim Laden der Seite: bestehende Session weiterverwenden.
 (async () => {
   try {
-    await api('/api/me');
+    await api('api/me');
     await enterGame();
   } catch (_) {
     authScreen.hidden = false;
