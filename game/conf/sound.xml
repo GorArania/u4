@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!-- $Id: sound.xml,v 1.6 2004/05/24 19:08:56 dougday Exp $ -->
+<sound>    
+    <track file="walk.wav"/>    <!-- WALK -->
+    <track file="blocked.wav"/> <!-- BLOCKED -->
+    <track file=""/>            <!-- ERROR -->
+    <track file=""/>            <!-- CANNON -->
+    <track file=""/>            <!-- MISSED -->
+    <track file=""/>            <!-- CREATUREATTACK -->
+    <track file=""/>            <!-- RUMBLE -->
+    <track file=""/>            <!-- PLAYERHIT -->
+    <track file="magic.ogg"/>   <!-- MAGIC -->
+    <track file="magic.ogg"/>   <!-- LBHEAL -->
+    <track file=""/>            <!-- WHIRLPOOL -->
+    <track file=""/>            <!-- STORM -->
+    <track file="moongate.ogg"/><!-- MOONGATE -->
+    <track file="flee.wav"/>    <!-- FLEE -->
+</sound>

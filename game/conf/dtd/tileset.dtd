@@ -1,0 +1,23 @@
+<!-- $Id: tileset.dtd,v 1.3 2004/09/11 19:50:58 dougday Exp $ -->
+
+<!ENTITY % bool '( true | false )'>
+<!ENTITY % comp '( none | rle | lzw )'>
+<!ENTITY % anim '( scroll | frame | slow_frame | cityflag | castleflag | lcbflag | shipflag | pirateflag | campfire | none )'>
+
+<!ELEMENT tileset ( tile+ ) >
+<!ATTLIST tileset name               CDATA    #REQUIRED
+                  imageName          CDATA    #IMPLIED
+                  extends            CDATA    #IMPLIED>
+
+<!ELEMENT tile EMPTY >
+<!ATTLIST tile  name               CDATA    #REQUIRED
+                image              CDATA    #IMPLIED
+                rule               CDATA    #IMPLIED
+                index              NMTOKEN  #IMPLIED
+                frames             NMTOKEN  #IMPLIED
+                directions         CDATA    #IMPLIED
+                animation          %anim;   #IMPLIED 
+                rowtoswap          NMTOKEN  #IMPLIED
+                opaque             %bool;   #IMPLIED                
+                frame              NMTOKEN  #IMPLIED
+                large              %bool;   #IMPLIED>

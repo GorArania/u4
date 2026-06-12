@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE tilesets SYSTEM "dtd/tilesets.dtd">
+<!-- $Id: tilesets.xml,v 1.10 2005/09/20 05:07:50 andrewtaylor Exp $ -->
+
+<tilesets>
+    <!-- Load some tilemaps -->
+    <xi:include xmlns:xi="http://www.w3.org/2003/XInclude" href="tilemap-base.xml"/>
+    <xi:include xmlns:xi="http://www.w3.org/2003/XInclude" href="tilemap-dungeon.xml"/>
+
+    <xi:include xmlns:xi="http://www.w3.org/2003/XInclude" href="tileset-base.xml"/>
+    <xi:include xmlns:xi="http://www.w3.org/2003/XInclude" href="tileset-dungeon.xml"/>
+</tilesets>
