@@ -1,0 +1,5 @@
+# Leitet api/register, api/login, ... auf das PHP-Backend um.
+# (Wird nur von Apache mit AllowOverride All ausgewertet; der Node.js-Server
+# hat seine eigenen Routen und ignoriert diese Datei.)
+RewriteEngine On
+RewriteRule ^api/(.+)$ api.php?r=$1 [QSA,L]

@@ -1,10 +1,20 @@
 # Ultima IV im Browser
 
 Gerüst, um **Ultima IV: Quest of the Avatar** (DOS) per [js-dos](https://js-dos.com)
-im Browser zu spielen – mit Node.js-Server, Benutzeranmeldung und
-Spielstand-Speicherung pro Benutzer in SQLite.
+im Browser zu spielen – mit Benutzeranmeldung und Spielstand-Speicherung pro
+Benutzer in SQLite. Das Backend gibt es in zwei austauschbaren Varianten:
 
-## Schnellstart
+- **Node.js** (`server.js` + `lib/`): eigenständiger Server, `npm start`.
+- **PHP** (`public/api.php` + `public/.htaccess`): läuft direkt unter Apache,
+  kein Node nötig. Apache-Konfiguration: siehe `apache/ultima4.conf`.
+
+Beide nutzen dieselbe Spielseite (`public/`), dieselbe API und dieselbe
+Datenbankdatei (`data/u4web.sqlite`). Wichtig: Die Passwort-Hashes der beiden
+Varianten sind nicht kompatibel (Node: scrypt, PHP: bcrypt) – beim Wechsel
+müssen sich Benutzer neu registrieren (am einfachsten vorher
+`data/u4web.sqlite` löschen).
+
+## Schnellstart (Node.js)
 
 ```bash
 npm install
@@ -13,6 +23,24 @@ npm start
 ```
 
 Dann <http://localhost:3000> öffnen, Benutzer registrieren und losspielen.
+
+## Schnellstart (Apache + PHP)
+
+Benötigt PHP ≥ 7.4 mit `pdo_sqlite` und `zip` (Pakete `php-sqlite3`, `php-zip`)
+sowie `mod_rewrite`. Projekt z. B. nach `/var/www/html/Ultima4` legen, dann:
+
+```bash
+sudo apt install -y php php-sqlite3 php-zip libapache2-mod-php
+sudo cp apache/ultima4.conf /etc/apache2/conf-available/ultima4.conf
+sudo a2enmod rewrite
+sudo a2enconf ultima4
+sudo systemctl reload apache2
+sudo chown -R www-data: /var/www/html/Ultima4
+```
+
+Das Spiel läuft dann unter `http://<server>/ultima4/`. Die Konfiguration
+sperrt zugleich den direkten Zugriff auf das Projektverzeichnis
+(Datenbank, Spieldateien), das sonst über den DocumentRoot erreichbar wäre.
 
 ## Wie es funktioniert
 
