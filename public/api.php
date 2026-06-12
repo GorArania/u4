@@ -142,6 +142,8 @@ function autoexec_lines($files) {
     $start = detect_start_command($files);
     if ($start !== null) {
         $lines[] = strtoupper($start);
+        // Nach Spielende den Emulator beenden statt einen DOS-Prompt zu zeigen.
+        $lines[] = 'exit';
     } else {
         $lines[] = 'echo Keine Startdatei (.exe/.com/.bat) gefunden.';
         $lines[] = 'echo Lege eine game/autoexec.txt mit den Startbefehlen an.';
