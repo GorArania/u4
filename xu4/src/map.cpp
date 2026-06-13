@@ -4,6 +4,7 @@
 
 #include "vc6.h" // Fixes things if you're using VC6, does nothing if otherwise
 
+#include <cstdlib>
 #include "u4.h"
 
 #include "map.h"
@@ -115,14 +116,14 @@ int MapCoords::getRelativeDirection(const MapCoords &c, const Map *map) const {
     if (map && map->border_behavior == Map::BORDER_WRAP) {
         MapCoords me = *this;            
         
-        if (abs(me.x - c.x) > abs(me.x + map->width - c.x))
+        if (std::abs(me.x - c.x) > std::abs((int)(me.x + map->width - c.x)))
             me.x += map->width;
-        else if (abs(me.x - c.x) > abs(me.x - map->width - c.x))
+        else if (std::abs(me.x - c.x) > std::abs((int)(me.x - map->width - c.x)))
             me.x -= map->width;
 
-        if (abs(me.y - c.y) > abs(me.y + map->width - c.y))
+        if (std::abs(me.y - c.y) > std::abs((int)(me.y + map->width - c.y)))
             me.y += map->height;
-        else if (abs(me.y - c.y) > abs(me.y - map->width - c.y))
+        else if (std::abs(me.y - c.y) > std::abs((int)(me.y - map->width - c.y)))
             me.y -= map->height;
 
         dx = me.x - c.x;
@@ -224,7 +225,7 @@ int MapCoords::distance(const MapCoords &c, const Map *map) const {
         return dist;
 
     /* calculate how many fewer movements there would have been */
-    dist -= abs(x - c.x) < abs(y - c.y) ? abs(x - c.x) : abs(y - c.y);
+    dist -= std::abs(x - c.x) < std::abs(y - c.y) ? std::abs(x - c.x) : std::abs(y - c.y);
 
     return dist;
 }

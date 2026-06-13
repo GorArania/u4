@@ -84,6 +84,9 @@ public:
 private:
     int w, h;
     bool indexed;
+    // Emscriptens SDL1 hat kein colorkey-Feld im PixelFormat; daher selbst
+    // merken (-1 = keiner gesetzt).
+    int colorKeyIndex;
 
     Image();                    /* use create method to construct images */
 

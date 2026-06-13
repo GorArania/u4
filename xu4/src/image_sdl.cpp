@@ -28,6 +28,7 @@ Image *Image::create(int w, int h, bool indexed, Image::Type type) {
     im->w = w;
     im->h = h;
     im->indexed = indexed;
+    im->colorKeyIndex = -1;
 
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
     rmask = 0xff000000;
@@ -69,6 +70,7 @@ Image *Image::createScreenImage() {
     ASSERT(screen->surface != NULL, "SDL_GetVideoSurface() returned a NULL screen surface!");
     screen->w = screen->surface->w;
     screen->h = screen->surface->h;
+    screen->colorKeyIndex = -1;
     screen->indexed = screen->surface->format->palette != NULL;
 
     return screen;
@@ -132,10 +134,10 @@ void Image::setPaletteFromImage(const Image *src) {
 }
 
 bool Image::getTransparentIndex(unsigned int &index) const {
-    if (!indexed || (surface->flags & SDL_SRCCOLORKEY) == 0)
+    if (!indexed || colorKeyIndex < 0)
         return false;
-        
-    index = surface->format->colorkey;
+
+    index = (unsigned int) colorKeyIndex;
     return true;
 }
 
@@ -144,6 +146,7 @@ void Image::setTransparentIndex(unsigned int index) {
     SDL_SetAlpha(surface, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
 
     if (indexed) {
+        colorKeyIndex = (int) index;
         SDL_SetColorKey(surface, SDL_SRCCOLORKEY, index);
     } else {
         int x, y;

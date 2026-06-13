@@ -152,7 +152,7 @@ TimedEventMgr::TimedEventMgr(int i) : baseInterval(i) {
             errorFatal("unable to init SDL: %s", SDL_GetError());
     }
 
-    id = static_cast<void*>(SDL_AddTimer(i, &TimedEventMgr::callback, this));
+    id = reinterpret_cast<void*>(static_cast<intptr_t>(SDL_AddTimer(i, &TimedEventMgr::callback, this)));
     instances++;
 }
 
@@ -163,7 +163,7 @@ TimedEventMgr::TimedEventMgr(int i) : baseInterval(i) {
  * objects.
  */
 TimedEventMgr::~TimedEventMgr() {
-    SDL_RemoveTimer(static_cast<SDL_TimerID>(id));
+    SDL_RemoveTimer(static_cast<SDL_TimerID>(reinterpret_cast<intptr_t>(id)));
     id = NULL;
     
     if (instances == 1)
@@ -199,14 +199,14 @@ void TimedEventMgr::reset(unsigned int interval) {
 
 void TimedEventMgr::stop() {
     if (id) {
-        SDL_RemoveTimer(static_cast<SDL_TimerID>(id));
+        SDL_RemoveTimer(static_cast<SDL_TimerID>(reinterpret_cast<intptr_t>(id)));
         id = NULL;
     }
 }
 
 void TimedEventMgr::start() {
     if (!id)
-        id = static_cast<void*>(SDL_AddTimer(baseInterval, &TimedEventMgr::callback, this));
+        id = reinterpret_cast<void*>(static_cast<intptr_t>(SDL_AddTimer(baseInterval, &TimedEventMgr::callback, this)));
 }
 
 /**
@@ -354,7 +354,7 @@ void EventHandler::setScreenUpdate(void (*updateScreen)(void)) {
  bool EventHandler::timerQueueEmpty() {
     SDL_Event event;
 
-    if (SDL_PeepEvents(&event, 1, SDL_PEEKEVENT, SDL_EVENTMASK(SDL_USEREVENT)))
+    if (SDL_PeepEvents(&event, 1, SDL_PEEKEVENT, SDL_USEREVENT, SDL_USEREVENT))
         return false;
     else
         return true;
