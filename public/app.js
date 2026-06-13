@@ -85,7 +85,9 @@ async function enterGame() {
   }
 
   showMessage('');
-  startEmulator(me.saveUpdatedAt);
+  // Erst nach dem Layout starten, damit js-dos die Container-Größe kennt
+  // (sonst bleibt die eingebettete Ansicht bis zum Vollbild leer).
+  requestAnimationFrame(() => startEmulator(me.saveUpdatedAt));
 }
 
 function startEmulator(saveStamp) {
@@ -97,8 +99,8 @@ function startEmulator(saveStamp) {
     autoStart: true,
     theme: 'dark',
     noCloud: true,
-    // Der Standard-Kern ("dosbox") stürzt mit dem VGA-Upgrade ab
-    // ("index out of bounds"); DOSBox-X emuliert die Grafik korrekt.
+    // DOSBox-X emuliert Ultima IV korrekt; der Standard-Kern ("dosbox")
+    // stürzt ab ("index out of bounds").
     backend: 'dosboxX',
     onEvent: (event, arg) => {
       if (event === 'ci-ready') {

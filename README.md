@@ -88,3 +88,25 @@ sperrt zugleich den direkten Zugriff auf das Projektverzeichnis
   Internetzugang die Dateien `js-dos.js`/`js-dos.css` (samt Emulator-Assets)
   lokal in `public/` ablegen und die Pfade in `public/index.html` anpassen.
 - Startbefehl anpassbar über `game/autoexec.txt` (siehe `game/README.md`).
+
+## Emulator-Hinweise (Ultima IV)
+
+Erkenntnisse aus dem Reproduzieren im DOSBox-X-Kern:
+
+- **Kern:** Es wird `backend: 'dosboxX'` genutzt. Der Standard-Kern (`dosbox`)
+  stürzt bei Ultima IV mit „index out of bounds" ab.
+- **Start ohne `ULTIMA.COM`:** Der Original-Launcher `ULTIMA.COM` verkettet
+  `TITLE.EXE` → `AVATAR.EXE`; diese Verkettung scheitert unter dem
+  WASM-DOSBox-X (das Spiel fällt nach „Journey Onward"/Charaktererschaffung
+  auf den DOS-Prompt zurück). Der Autostart ruft daher `TITLE.EXE`
+  (Titel + Charaktererschaffung) und `AVATAR.EXE` (Spielwelt) direkt
+  nacheinander auf. Das ist in `lib/bundle.js` bzw. `public/api.php`
+  fest hinterlegt, sobald `AVATAR.EXE` + `TITLE.EXE` im `game/`-Stamm liegen.
+- **CPU:** `core=normal`, `cputype=386`, `cycles=fixed 3000` – das 1987er-Spiel
+  läuft mit dem dynamischen Kern / `cycles=auto` instabil.
+- **VGA/MIDI-Upgrade läuft NICHT im Browser:** Die gepatchte `AVATAR.EXE` aus
+  `game/upgrade/` benötigt den residenten Musik-Treiber (AIL/MIDPAK über
+  INT 66h). Dieser Interrupt wird vom WASM-DOSBox-X nicht unterstützt
+  („Illegal Unhandled Interrupt Called 66") → sofortiger Absturz. Es läuft
+  daher die Original-EGA-Version. Die Upgrade-Dateien bleiben im Repo, werden
+  aber nicht gestartet.

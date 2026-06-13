@@ -139,6 +139,24 @@ function autoexec_lines($files) {
         return array_values(array_filter(preg_split('/\r?\n/', file_get_contents($custom))));
     }
     $lines = array('mount c .', 'c:');
+
+    // Ultima IV: NICHT über ULTIMA.COM starten. Dessen Verkettung
+    // TITLE.EXE -> AVATAR.EXE scheitert unter dem WASM-DOSBox-X (Rückfall auf
+    // den DOS-Prompt). Stattdessen Titel/Charaktererschaffung und Spiel direkt
+    // nacheinander aufrufen.
+    $rootLower = array();
+    foreach ($files as $f) {
+        if (strpos($f, '/') === false) {
+            $rootLower[] = strtolower($f);
+        }
+    }
+    if (in_array('avatar.exe', $rootLower, true) && in_array('title.exe', $rootLower, true)) {
+        $lines[] = 'TITLE.EXE';
+        $lines[] = 'AVATAR.EXE';
+        $lines[] = 'exit';
+        return $lines;
+    }
+
     $start = detect_start_command($files);
     if ($start !== null) {
         $lines[] = strtoupper($start);
@@ -156,7 +174,9 @@ function dosbox_conf($files) {
         array(
             '[sdl]', 'autolock=true', '',
             '[render]', 'aspect=true', '',
-            '[cpu]', 'core=auto', 'cputype=auto', 'cycles=auto', '',
+            // Ultima IV (1987) verträgt den dynamischen Kern und hohe Taktraten
+            // schlecht; fester Normal-Kern mit niedriger Taktrate läuft stabil.
+            '[cpu]', 'core=normal', 'cputype=386', 'cycles=fixed 3000', '',
             '[autoexec]',
         ),
         autoexec_lines($files),
