@@ -245,6 +245,7 @@ void EventHandler::run() {
             else
                 key = event.key.keysym.sym;
 
+
             if (event.key.keysym.mod & KMOD_ALT)
 #if defined(MACOSX)
                 key = U4_ALT + event.key.keysym.sym; // macosx translates alt keys into strange unicode chars

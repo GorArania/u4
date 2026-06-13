@@ -63,7 +63,11 @@ Settings::Settings() {
     battleDiffs.push_back("Hard");
     battleDiffs.push_back("Expert");
 
-#if defined(MACOSX)
+#if defined(__EMSCRIPTEN__)
+    /* Spielstände im per IDBFS persistierten Verzeichnis ablegen (siehe
+       xu4-ui.js: /save ist IDBFS-gemountet und wird nach Eingaben gesichert). */
+    userPath = "/save/";
+#elif defined(MACOSX)
     char *home = getenv("HOME");
     if (home && home[0]) {
         userPath += home;
