@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Ultima IV (xu4)</title>
+  <link rel="stylesheet" href="xu4.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="screen-wrap">
+      <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+      <div id="loading">Lade Ultima IV …</div>
+    </div>
+
+    <!-- Touch-Steuerung -->
+    <div id="controls">
+      <!-- Bewegungs-Steuerkreuz (komfortabel, getrennt von den Befehlen) -->
+      <div id="dpad">
+        <button class="dir" data-key="up"    aria-label="Norden">▲</button>
+        <button class="dir" data-key="left"  aria-label="Westen">◄</button>
+        <button class="dir" data-key="enter" aria-label="Bestätigen">●</button>
+        <button class="dir" data-key="right" aria-label="Osten">►</button>
+        <button class="dir" data-key="down"  aria-label="Süden">▼</button>
+      </div>
+
+      <!-- Befehlstasten: in Ultima IV ist fast jedem Buchstaben ein Befehl zugeordnet -->
+      <div id="commands"></div>
+    </div>
+  </div>
+
+  <script src="xu4-ui.js"></script>
+  <script src="u4.js"></script>
+</body>
+</html>
