@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
         /* do the intro */
         perf.start();
         intro->init();
-        perf.end("introInit()");        
+        perf.end("introInit()");
         
         /* give a performance report */
         if (settings.debug)

@@ -321,7 +321,7 @@ void EventHandler::run() {
         }
 
         case SDL_USEREVENT: {
-            eventHandler->getTimer()->tick();            
+            eventHandler->getTimer()->tick();
             break;
         }
 
@@ -352,12 +352,10 @@ void EventHandler::setScreenUpdate(void (*updateScreen)(void)) {
  * Returns true if the queue is empty of events that match 'mask'. 
  */
  bool EventHandler::timerQueueEmpty() {
-    SDL_Event event;
-
-    if (SDL_PeepEvents(&event, 1, SDL_PEEKEVENT, SDL_USEREVENT, SDL_USEREVENT))
-        return false;
-    else
-        return true;
+    /* Emscriptens SDL_PeepEvents unterstützt kein PEEKEVENT. Diese Funktion ist
+       nur eine Frame-Drop-Optimierung; immer true zu liefern bedeutet, dass der
+       Bildschirm stets aktualisiert wird (unkritisch). */
+    return true;
 }
 
 Controller *EventHandler::pushController(Controller *c) {

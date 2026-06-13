@@ -87,6 +87,24 @@ private:
     // Emscriptens SDL1 hat kein colorkey-Feld im PixelFormat; daher selbst
     // merken (-1 = keiner gesetzt).
     int colorKeyIndex;
+    // Emscripten/WASM: SDL1 kann keine indizierten (Paletten-)Surfaces. Daher
+    // werden ALLE Surfaces als 32-Bit-RGBA gehalten. Für "indizierte" Bilder
+    // merken wir Index-Puffer + Palette selbst und lösen beim Schreiben bzw.
+    // beim Setzen der Palette nach RGBA auf (Transparenz über Alpha=0).
+    unsigned char *indexedData;  // w*h Indexwerte (nur wenn indexed)
+    RGBA *palette;               // 256 Paletteneinträge (nur wenn indexed)
+    void resolvePixel(int x, int y);
+    void resolveIndexed();
+    // Emscripten-SDL1 synchronisiert den Pixelpuffer (surface->pixels) nur beim
+    // Unlock mit dem Canvas, aus dem SDL_BlitSurface liest – und verlangt, dass
+    // Surfaces beim Blitten NICHT gesperrt sind. Daher: vor Pixel-Zugriffen
+    // sperren (lockPixels), vor Blits entsperren (unlockPixels, flusht Puffer
+    // -> Canvas). Nur für eigene Surfaces; der Bildschirm wird separat per
+    // SDL_UpdateRect aktualisiert.
+    bool ownSurface;       // true für selbst erzeugte (sperrbare) Surfaces
+    mutable bool locked;   // ob wir gerade die Sperre halten
+    void lockPixels() const;    // sicherstellen, dass Puffer beschreibbar ist
+    void unlockPixels() const;  // Puffer -> Canvas flushen, entsperren
 
     Image();                    /* use create method to construct images */
 

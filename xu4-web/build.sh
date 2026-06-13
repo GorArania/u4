@@ -3,21 +3,31 @@
 # Baut die xu4-Engine (../xu4) nach WebAssembly.
 # Voraussetzungen:
 #   - Emscripten SDK aktiviert (source /opt/emsdk/emsdk_env.sh)
-#   - libxml2 als WASM-Statiklib unter $LIBXML2_WASM gebaut (siehe README)
+#   - libxml2 als WASM-Statiklib unter $LIBXML2_WASM (siehe README)
+#   - Datenverzeichnis erstellt (./prepare-data.sh)
 #
 set -euo pipefail
 
-SRC="$(cd "$(dirname "$0")/../xu4/src" && pwd)"
-OUT="$(cd "$(dirname "$0")" && pwd)/dist"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+SRC="$(cd "$HERE/../xu4/src" && pwd)"
+OUTDIR="$HERE/web"
 LIBXML2_WASM="${LIBXML2_WASM:-/opt/libxml2-wasm}"
 BUILD="${BUILD:-/tmp/xu4build}"
+DATA="$HERE/dist/data"
 
-mkdir -p "$BUILD/lzw" "$OUT"
+mkdir -p "$BUILD/lzw"
 
 CXXFLAGS="-I. -I$LIBXML2_WASM/include/libxml2 -sUSE_SDL=1 -sUSE_SDL_MIXER=1 \
   -sUSE_LIBPNG=1 -sUSE_ZLIB=1 -DVERSION=\"1.0beta3-web\" -DICON_FILE=\"u4.bmp\" \
   -DHAVE_VARIADIC_MACROS=1 -std=gnu++14 -O2 -Wno-everything"
 CFLAGS="-I. -sUSE_ZLIB=1 -O2 -Wno-everything"
+
+# Linker-Flags. ASYNCIFY lässt xu4s blockierende Hauptschleife (SDL_WaitEvent)
+# laufen; web_sdl_timer.js repariert SDL_AddTimer (periodisch statt einmalig).
+LDFLAGS="-sUSE_SDL=1 -sUSE_SDL_MIXER=1 -sUSE_LIBPNG=1 -sUSE_ZLIB=1 \
+  -sASYNCIFY -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 -sFORCE_FILESYSTEM=1 \
+  -sSTACK_SIZE=8MB -lidbfs.js -sEXPORTED_RUNTIME_METHODS=FS,callMain,ccall \
+  --use-preload-plugins --js-library $HERE/web_sdl_timer.js -O2"
 
 CXX_SRCS="annotation armor aura camp cheat city codex combat config controller
   conversation creature death debug dialogueloader dialogueloader_tlk direction
@@ -40,10 +50,6 @@ done
 
 echo "LINK u4.js"
 emcc "$BUILD"/*.o "$BUILD"/lzw/*.o "$LIBXML2_WASM/lib/libxml2.a" \
-  -sUSE_SDL=1 -sUSE_SDL_MIXER=1 -sUSE_LIBPNG=1 -sUSE_ZLIB=1 \
-  -sASYNCIFY -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 \
-  -sMODULARIZE=1 -sEXPORT_NAME=createU4 \
-  --preload-file "$OUT/data@/u4" \
-  -O2 -o "$OUT/u4.js"
+  $LDFLAGS --preload-file "$DATA@/" -o "$OUTDIR/u4.js"
 
-echo "Fertig: $OUT/u4.js + u4.wasm + u4.data"
+echo "Fertig: $OUTDIR/u4.{js,wasm,data}"

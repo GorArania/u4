@@ -17,47 +17,83 @@ Image::Image() {
  * Creates a new image.  Scale is stored to allow drawing using U4
  * (320x200) coordinates, regardless of the actual image scale.
  * Indexed is true for palette based images, or false for RGB images.
- * Image type determines whether to create a hardware (i.e. video ram)
- * or software (i.e. normal ram) image.
+ *
+ * Hinweis (WASM): Emscriptens SDL1 kennt keine indizierten Surfaces. ALLE
+ * Surfaces werden als 32-Bit-RGBA-Software-Surface angelegt; für indizierte
+ * Bilder merken wir Index-Puffer + Palette selbst und lösen nach RGBA auf.
  */
 Image *Image::create(int w, int h, bool indexed, Image::Type type) {
-    Uint32 rmask, gmask, bmask, amask;
-    Uint32 flags;
     Image *im = new Image;
 
     im->w = w;
     im->h = h;
     im->indexed = indexed;
     im->colorKeyIndex = -1;
+    im->indexedData = NULL;
+    im->palette = NULL;
+    im->ownSurface = true;
+    im->locked = false;
 
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    rmask = 0xff000000;
-    gmask = 0x00ff0000;
-    bmask = 0x0000ff00;
-    amask = 0x000000ff;
-#else
-    rmask = 0x000000ff;
-    gmask = 0x0000ff00;
-    bmask = 0x00ff0000;
-    amask = 0xff000000;
-#endif
-
-    if (type == Image::HARDWARE)
-        flags = SDL_HWSURFACE;
-    else
-        flags = SDL_SWSURFACE;
-    
-    if (indexed)
-        im->surface = SDL_CreateRGBSurface(flags, w, h, 8, rmask, gmask, bmask, amask);
-    else
-        im->surface = SDL_CreateRGBSurface(flags, w, h, 32, rmask, gmask, bmask, amask);
+    Uint32 rmask = 0x000000ff, gmask = 0x0000ff00, bmask = 0x00ff0000, amask = 0xff000000;
+    im->surface = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 32, rmask, gmask, bmask, amask);
 
     if (!im->surface) {
         delete im;
         return NULL;
     }
 
+    if (indexed) {
+        im->indexedData = new unsigned char[w * h]();
+        im->palette = new RGBA[256]();
+    }
+
     return im;
+}
+
+/**
+ * Sorgt dafür, dass surface->pixels beschreib-/lesbar ist (gesperrt).
+ */
+void Image::lockPixels() const {
+    if (ownSurface && !locked) {
+        SDL_LockSurface(surface);
+        locked = true;
+    }
+}
+
+/**
+ * Schiebt Pixeländerungen aus dem Puffer in den Canvas (Unlock) und gibt die
+ * Sperre frei – nötig, weil Emscriptens SDL_BlitSurface aus dem Canvas liest
+ * und gesperrte Surfaces nicht blitten darf.
+ */
+void Image::unlockPixels() const {
+    if (ownSurface && locked) {
+        SDL_UnlockSurface(surface);
+        locked = false;
+    }
+}
+
+/**
+ * Schreibt den aufgelösten RGBA-Wert eines indizierten Pixels in den Puffer.
+ */
+void Image::resolvePixel(int x, int y) {
+    unsigned char idx = indexedData[y * w + x];
+    RGBA c = palette[idx];
+    Uint8 a = (colorKeyIndex >= 0 && (int) idx == colorKeyIndex) ? 0 : 255;
+    Uint32 pix = SDL_MapRGBA(surface->format,
+                             static_cast<Uint8>(c.r), static_cast<Uint8>(c.g),
+                             static_cast<Uint8>(c.b), a);
+    *reinterpret_cast<Uint32 *>(static_cast<Uint8 *>(surface->pixels) + y * surface->pitch + x * 4) = pix;
+}
+
+/**
+ * Löst den gesamten Index-Puffer anhand der aktuellen Palette nach RGBA auf.
+ */
+void Image::resolveIndexed() {
+    if (!indexed) return;
+    lockPixels();
+    for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+            resolvePixel(x, y);
 }
 
 /**
@@ -71,7 +107,13 @@ Image *Image::createScreenImage() {
     screen->w = screen->surface->w;
     screen->h = screen->surface->h;
     screen->colorKeyIndex = -1;
-    screen->indexed = screen->surface->format->palette != NULL;
+    screen->indexed = false;
+    screen->indexedData = NULL;
+    screen->palette = NULL;
+    /* Der Bildschirm wird über SDL_UpdateRect (screenRedrawScreen) aktualisiert,
+       nicht von uns gesperrt. */
+    screen->ownSurface = false;
+    screen->locked = false;
 
     return screen;
 }
@@ -79,17 +121,17 @@ Image *Image::createScreenImage() {
 /**
  * Creates a duplicate of another image
  */
-Image *Image::duplicate(Image *image) {    
+Image *Image::duplicate(Image *image) {
     bool alphaOn = image->isAlphaOn();
-    Image *im = create(image->width(), image->height(), image->isIndexed(), image->surface->flags & SDL_HWSURFACE ? HARDWARE : SOFTWARE);
-    
+    Image *im = create(image->width(), image->height(), image->isIndexed(), SOFTWARE);
+
     if (image->isIndexed())
         im->setPaletteFromImage(image);
 
     /* Turn alpha off before blitting to non-screen surfaces */
     if (alphaOn)
         image->alphaOff();
-    
+
     image->drawOn(im, 0, 0);
 
     if (alphaOn)
@@ -102,7 +144,10 @@ Image *Image::duplicate(Image *image) {
  * Frees the image.
  */
 Image::~Image() {
+    unlockPixels();
     SDL_FreeSurface(surface);
+    delete [] indexedData;
+    delete [] palette;
 }
 
 /**
@@ -110,17 +155,11 @@ Image::~Image() {
  */
 void Image::setPalette(const RGBA *colors, unsigned n_colors) {
     ASSERT(indexed, "imageSetPalette called on non-indexed image");
-    
-    SDL_Color *sdlcolors = new SDL_Color[n_colors];
-    for (unsigned i = 0; i < n_colors; i++) {
-        sdlcolors[i].r = colors[i].r;
-        sdlcolors[i].g = colors[i].g;
-        sdlcolors[i].b = colors[i].b;
-    }
 
-    SDL_SetColors(surface, sdlcolors, 0, n_colors);
+    for (unsigned i = 0; i < n_colors && i < 256; i++)
+        palette[i] = colors[i];
 
-    delete [] sdlcolors;
+    resolveIndexed();
 }
 
 /**
@@ -128,9 +167,8 @@ void Image::setPalette(const RGBA *colors, unsigned n_colors) {
  */
 void Image::setPaletteFromImage(const Image *src) {
     ASSERT(indexed && src->indexed, "imageSetPaletteFromImage called on non-indexed image");
-    memcpy(surface->format->palette->colors, 
-           src->surface->format->palette->colors, 
-           sizeof(SDL_Color) * src->surface->format->palette->ncolors);
+    memcpy(palette, src->palette, sizeof(RGBA) * 256);
+    resolveIndexed();
 }
 
 bool Image::getTransparentIndex(unsigned int &index) const {
@@ -147,7 +185,7 @@ void Image::setTransparentIndex(unsigned int index) {
 
     if (indexed) {
         colorKeyIndex = (int) index;
-        SDL_SetColorKey(surface, SDL_SRCCOLORKEY, index);
+        resolveIndexed(); /* betroffene Pixel bekommen Alpha 0 */
     } else {
         int x, y;
         Uint8 t_r, t_g, t_b;
@@ -173,11 +211,11 @@ bool Image::isAlphaOn() const {
 }
 
 void Image::alphaOn() {
-    surface->flags |= SDL_SRCALPHA;    
+    surface->flags |= SDL_SRCALPHA;
 }
 
 void Image::alphaOff() {
-    surface->flags &= ~SDL_SRCALPHA;    
+    surface->flags &= ~SDL_SRCALPHA;
 }
 
 /**
@@ -193,36 +231,12 @@ void Image::putPixel(int x, int y, int r, int g, int b, int a) {
  * If the image is RGB, it is a packed RGB triplet.
  */
 void Image::putPixelIndex(int x, int y, unsigned int index) {
-    int bpp;
-    Uint8 *p;
-
-    bpp = surface->format->BytesPerPixel;
-    p = static_cast<Uint8 *>(surface->pixels) + y * surface->pitch + x * bpp;
-
-    switch(bpp) {
-    case 1:
-        *p = index;
-        break;
-
-    case 2:
-        *reinterpret_cast<Uint16 *>(p) = index;
-        break;
-
-    case 3:
-        if(SDL_BYTEORDER == SDL_BIG_ENDIAN) {
-            p[0] = (index >> 16) & 0xff;
-            p[1] = (index >> 8) & 0xff;
-            p[2] = index & 0xff;
-        } else {
-            p[0] = index & 0xff;
-            p[1] = (index >> 8) & 0xff;
-            p[2] = (index >> 16) & 0xff;
-        }
-        break;
-
-    case 4:
-        *reinterpret_cast<Uint32 *>(p) = index;
-        break;
+    lockPixels();
+    if (indexed) {
+        indexedData[y * w + x] = static_cast<unsigned char>(index);
+        resolvePixel(x, y);
+    } else {
+        *reinterpret_cast<Uint32 *>(static_cast<Uint8 *>(surface->pixels) + y * surface->pitch + x * 4) = index;
     }
 }
 
@@ -230,15 +244,15 @@ void Image::putPixelIndex(int x, int y, unsigned int index) {
  * Fills a rectangle in the image with a given color.
  */
 void Image::fillRect(int x, int y, int w, int h, int r, int g, int b) {
+    /* SDL_FillRect zeichnet in Emscripten direkt in den Canvas; daher vorher
+       entsperren, damit ein späteres lockPixels den Canvas zurücklädt. */
+    unlockPixels();
     SDL_Rect dest;
-    Uint32 pixel;
-
-    pixel = SDL_MapRGB(surface->format, static_cast<Uint8>(r), static_cast<Uint8>(g), static_cast<Uint8>(b));
+    Uint32 pixel = SDL_MapRGB(surface->format, static_cast<Uint8>(r), static_cast<Uint8>(g), static_cast<Uint8>(b));
     dest.x = x;
     dest.y = y;
     dest.w = w;
     dest.h = h;
-
     SDL_FillRect(surface, &dest, pixel);
 }
 
@@ -246,11 +260,17 @@ void Image::fillRect(int x, int y, int w, int h, int r, int g, int b) {
  * Gets the color of a single pixel.
  */
 void Image::getPixel(int x, int y, unsigned int &r, unsigned int &g, unsigned int &b, unsigned int &a) const {
+    if (indexed) {
+        unsigned char idx = indexedData[y * w + x];
+        RGBA c = palette[idx];
+        r = c.r; g = c.g; b = c.b;
+        a = (colorKeyIndex >= 0 && (int) idx == colorKeyIndex) ? IM_TRANSPARENT : IM_OPAQUE;
+        return;
+    }
+
     unsigned int index;
     Uint8 r1, g1, b1, a1;
-
     getPixelIndex(x, y, index);
-
     SDL_GetRGBA(index, surface->format, &r1, &g1, &b1, &a1);
     r = r1;
     g = g1;
@@ -259,37 +279,15 @@ void Image::getPixel(int x, int y, unsigned int &r, unsigned int &g, unsigned in
 }
 
 /**
- * Gets the palette index of a single pixel.  If the image is in
- * indexed mode, then the index is simply the palette entry number.
- * If the image is RGB, it is a packed RGB triplet.
+ * Gets the palette index of a single pixel.
  */
 void Image::getPixelIndex(int x, int y, unsigned int &index) const {
-    int bpp = surface->format->BytesPerPixel;
-
-    Uint8 *p = static_cast<Uint8 *>(surface->pixels) + y * surface->pitch + x * bpp;
-
-    switch(bpp) {
-    case 1:
-        index = *p;
-        break;
-
-    case 2:
-        index = *reinterpret_cast<Uint16 *>(p);
-        break;
-
-    case 3:
-        if(SDL_BYTEORDER == SDL_BIG_ENDIAN)
-            index = p[0] << 16 | p[1] << 8 | p[2];
-        else
-            index = p[0] | p[1] << 8 | p[2] << 16;
-        break;
-
-    case 4:
-        index = *reinterpret_cast<Uint32 *>(p);
-
-    default:
+    if (indexed) {
+        index = indexedData[y * w + x];
         return;
     }
+    lockPixels();
+    index = *reinterpret_cast<Uint32 *>(static_cast<Uint8 *>(surface->pixels) + y * surface->pitch + x * 4);
 }
 
 /**
@@ -299,35 +297,29 @@ void Image::draw(int x, int y) const {
     drawOn(NULL, x, y);
 }
 
-/**
- * Draws a piece of the image onto the screen at the given offset.
- * The area of the image to draw is defined by the rectangle rx, ry,
- * rw, rh.
- */
 void Image::drawSubRect(int x, int y, int rx, int ry, int rw, int rh) const {
     drawSubRectOn(NULL, x, y, rx, ry, rw, rh);
 }
 
-/**
- * Draws a piece of the image onto the screen at the given offset, inverted.
- * The area of the image to draw is defined by the rectangle rx, ry,
- * rw, rh.
- */
 void Image::drawSubRectInverted(int x, int y, int rx, int ry, int rw, int rh) const {
     drawSubRectInvertedOn(NULL, x, y, rx, ry, rw, rh);
 }
 
 /**
- * Draws the image onto another image.
+ * Draws the image onto another image (or the screen if d == NULL).
+ * Quelle und Ziel müssen vor dem Blit entsperrt sein (Canvas aktuell).
  */
 void Image::drawOn(Image *d, int x, int y) const {
     SDL_Rect r;
     SDL_Surface *destSurface;
 
+    unlockPixels();
     if (d == NULL)
         destSurface = SDL_GetVideoSurface();
-    else
+    else {
+        d->unlockPixels();
         destSurface = d->surface;
+    }
 
     r.x = x;
     r.y = y;
@@ -336,17 +328,17 @@ void Image::drawOn(Image *d, int x, int y) const {
     SDL_BlitSurface(surface, NULL, destSurface, &r);
 }
 
-/**
- * Draws a piece of the image onto another image.
- */
 void Image::drawSubRectOn(Image *d, int x, int y, int rx, int ry, int rw, int rh) const {
     SDL_Rect src, dest;
     SDL_Surface *destSurface;
 
+    unlockPixels();
     if (d == NULL)
         destSurface = SDL_GetVideoSurface();
-    else
+    else {
+        d->unlockPixels();
         destSurface = d->surface;
+    }
 
     src.x = rx;
     src.y = ry;
@@ -360,18 +352,18 @@ void Image::drawSubRectOn(Image *d, int x, int y, int rx, int ry, int rw, int rh
     SDL_BlitSurface(surface, &src, destSurface, &dest);
 }
 
-/**
- * Draws a piece of the image onto another image, inverted.
- */
 void Image::drawSubRectInvertedOn(Image *d, int x, int y, int rx, int ry, int rw, int rh) const {
     int i;
     SDL_Rect src, dest;
     SDL_Surface *destSurface;
 
+    unlockPixels();
     if (d == NULL)
         destSurface = SDL_GetVideoSurface();
-    else
+    else {
+        d->unlockPixels();
         destSurface = d->surface;
+    }
 
     for (i = 0; i < rh; i++) {
         src.x = rx;

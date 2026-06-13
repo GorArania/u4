@@ -14,7 +14,9 @@
   // --- Emscripten-Module ---------------------------------------------------
   window.Module = {
     canvas: canvas,
-    arguments: [],
+    // -q: Audio vorerst aus (MIDI ist im Browser nicht dekodierbar; Musik folgt
+    // als OGG). Der xu4-Build wird sonst beim Laden der Intro-Musik blockiert.
+    arguments: ['-q'],
     preRun: [],
     print: function (t) { console.log(t); },
     printErr: function (t) { console.warn(t); },
