@@ -11,9 +11,10 @@ html, body {
 }
 
 #app {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   height: 100%;
+  overflow: hidden;
 }
 
 [hidden] { display: none !important; }
@@ -63,8 +64,8 @@ html, body {
 /* Spielbildschirm */
 #screen-wrap {
   position: relative;
-  flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,7 +90,6 @@ html, body {
 
 /* Steuerung – Tastatur oben, Richtungskreuz darunter */
 #controls {
-  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
