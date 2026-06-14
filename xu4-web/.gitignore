@@ -2,3 +2,4 @@ dist/
 web/u4.js
 web/u4.wasm
 web/u4.data
+web/data/

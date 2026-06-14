@@ -16,6 +16,48 @@ html, body {
   height: 100%;
 }
 
+[hidden] { display: none !important; }
+
+/* Anmeldung */
+#auth { height: 100%; display: flex; align-items: center; justify-content: center; }
+.auth-box {
+  width: min(360px, 90vw);
+  padding: 2rem;
+  background: #1f1830;
+  border: 1px solid #4a3c6e;
+  border-radius: 8px;
+}
+.auth-box h1 {
+  margin: 0; text-align: center; font-size: 2.2rem;
+  letter-spacing: 0.1em; color: #d8b94a;
+}
+.subtitle { margin: 0.25rem 0 1.5rem; text-align: center; font-style: italic; color: #9d92b8; }
+#auth-form { display: flex; flex-direction: column; gap: 0.4rem; }
+#auth-form label { font-size: 0.9rem; color: #9d92b8; }
+#auth-form input {
+  padding: 0.5rem; margin-bottom: 0.6rem; background: #14101e;
+  border: 1px solid #4a3c6e; border-radius: 4px; color: #e8e2d0; font-size: 1rem;
+}
+.buttons { display: flex; gap: 0.6rem; margin-top: 0.4rem; }
+.buttons button {
+  flex: 1; padding: 0.55rem 0.9rem; background: #d8b94a; border: none;
+  border-radius: 4px; color: #14101e; font-weight: bold; cursor: pointer;
+}
+.buttons button.secondary, #topbar button {
+  background: #4a3c6e; color: #e8e2d0;
+}
+.error { color: #e06c5a; font-size: 0.9rem; margin: 0.2rem 0; }
+
+/* Kopfleiste */
+#topbar {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.4rem 0.8rem; background: #14101e; border-bottom: 1px solid #4a3c6e;
+}
+#topbar button { padding: 0.4rem 0.8rem; border: 1px solid #4a3c6e; border-radius: 4px; cursor: pointer; }
+#player-name { font-weight: bold; color: #d8b94a; }
+#save-info { font-size: 0.8rem; color: #9d92b8; }
+.spacer { flex: 1; }
+
 /* Spielbildschirm */
 #screen-wrap {
   position: relative;

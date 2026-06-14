@@ -1,0 +1,11 @@
+# api/register, api/login, api/save, ... -> api.php
+RewriteEngine On
+# Bei Auslieferung unter einem Unterpfad (z. B. /ultima4xu4/) hier anpassen:
+# RewriteBase /ultima4xu4/
+RewriteRule ^api/(.+)$ api.php?r=$1 [QSA,L]
+
+# Datenbank/Spielstände nicht direkt ausliefern.
+<FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm)$">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/.*/data/.*$
