@@ -294,8 +294,8 @@ void GameController::init() {
     imageMgr->get(BKGD_BORDERS)->image->draw(0, 0);
     c->stats->update(); /* draw the party stats */
 
-    screenMessage("Press Alt-h for help\n");    
-    screenPrompt();    
+    screenMessage("Press Alt-h for help\n");
+    screenPrompt();
 
     TRACE_LOCAL(gameDbg, "Settings up reagent menu."); 
     c->stats->resetReagentsMenu();

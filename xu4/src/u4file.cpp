@@ -129,6 +129,10 @@ bool u4isUpgradeAvailable() {
  * (switch.bat or setup.bat has been run)
  */
 bool u4isUpgradeInstalled() {
+#ifdef __EMSCRIPTEN__
+    /* Web build always deploys with VGA upgrade files */
+    return true;
+#else
     U4FILE *u4f = NULL;
     long int filelength;
     bool result = false;
@@ -145,10 +149,8 @@ bool u4isUpgradeInstalled() {
             result = true;
     }
 
-    if (verbose)
-        printf("u4isUpgradeInstalled %d\n", (int) result);
-
     return result;
+#endif
 }
 
 /**

@@ -27,7 +27,7 @@ using std::string;
 
 #define DEFAULT_SCALE                   2
 #define DEFAULT_FULLSCREEN              0
-#define DEFAULT_FILTER                  "Scale2x"
+#define DEFAULT_FILTER                  "point"
 #define DEFAULT_VIDEO_TYPE              "VGA"
 #define DEFAULT_GEM_LAYOUT              "Standard"
 #define DEFAULT_SCREEN_SHAKES           1

@@ -13,17 +13,18 @@ DATA="$(cd "$(dirname "$0")" && pwd)/dist/data"
 rm -rf "$DATA"
 mkdir -p "$DATA/ultima4" "$DATA/conf" "$DATA/graphics" "$DATA/mid" "$DATA/sound"
 
-# Originale DOS-Spieldateien (ohne Upgrade-Ordner / Hilfsdateien)
-for f in "$GAME"/*; do
-  name="$(basename "$f")"
+# Spieldateien aus dem VGA-Upgrade-Ordner (vollständige U4-Installation MIT
+# VGA-Upgrade: große ega.drv, VGA-*.ega, shapes.vga, charset.vga ...). xu4
+# erkennt das Upgrade dann als installiert und lädt die VGA-256-Farben-Grafik.
+# Fallback auf game/ (Original-EGA), falls kein upgrade/-Ordner vorhanden ist.
+SRCDIR="$GAME"
+[ -d "$GAME/upgrade" ] && SRCDIR="$GAME/upgrade"
+for f in "$SRCDIR"/*; do
   [ -d "$f" ] && continue
-  case "${name,,}" in
-    *.bat|readme.md|autoexec.txt|run.bat) continue ;;
-  esac
   cp "$f" "$DATA/ultima4/"
 done
 
-# VGA-Upgrade als u4upgrad.zip neu packen (xu4 liest die VGA-Grafik daraus)
+# VGA-Upgrade zusätzlich als u4upgrad.zip (Sicherheitsnetz für VGA-Dateien)
 if [ -d "$GAME/upgrade" ]; then
   ( cd "$GAME/upgrade" && zip -qr "$DATA/u4upgrad.zip" . )
 fi
