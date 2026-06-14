@@ -5,6 +5,9 @@
 #include "vc6.h" // Fixes things if you're using VC6, does nothing if otherwise
 
 #include <SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include "u4.h"
 
 #include "event.h"
@@ -220,7 +223,11 @@ EventHandler::EventHandler() : timer(eventTimerGranularity), updateScreen(NULL) 
  * Delays program execution for the specified number of milliseconds.
  */
 void EventHandler::sleep(unsigned int usec) {
+#ifdef __EMSCRIPTEN__
+    if (usec > 0) emscripten_sleep(usec);
+#else
     SDL_Delay(usec);
+#endif
 }
 
 void EventHandler::run() {

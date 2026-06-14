@@ -764,7 +764,9 @@ void CombatController::finishTurn(void) {
                 player = ct->getCurrentPlayer();
 
                 gameUpdateScreen();
+#ifndef __EMSCRIPTEN__
                 EventHandler::sleep(50); /* give a slight pause in case party members are asleep for awhile */
+#endif
 
                 /* adjust moves */
                 c->party->endTurn();

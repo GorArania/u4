@@ -5,6 +5,9 @@
 #include "vc6.h" // Fixes things if you're using VC6, does nothing if otherwise
 
 #include <list>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include "event.h"
 
@@ -32,28 +35,39 @@ EventHandler *EventHandler::getInstance() {
 }
 
 /**
- * Waits a given number of milliseconds before continuing 
- */ 
+ * Waits a given number of milliseconds before continuing
+ */
 void EventHandler::wait_msecs(unsigned int msecs) {
+#ifdef __EMSCRIPTEN__
+    /* Verschachtelter run()-Aufruf via WaitController ist in ASYNCIFY nicht
+       re-entrant-sicher. Direktes emscripten_sleep() ist zuverlässiger. */
+    if (msecs > 0) emscripten_sleep(msecs);
+#else
     int msecs_per_cycle = (1000 / settings.gameCyclesPerSecond);
     int cycles = msecs / msecs_per_cycle;
 
-    if (cycles > 0) {        
+    if (cycles > 0) {
         WaitController waitCtrl(cycles);
         getInstance()->pushController(&waitCtrl);
         waitCtrl.wait();
     }
     // Sleep the rest of the msecs we can't wait for
     EventHandler::sleep(msecs % msecs_per_cycle);
+#endif
 }
 
 /**
  * Waits a given number of game cycles before continuing
- */ 
+ */
 void EventHandler::wait_cycles(unsigned int cycles) {
+#ifdef __EMSCRIPTEN__
+    int msecs = cycles * (1000 / settings.gameCyclesPerSecond);
+    if (msecs > 0) emscripten_sleep(msecs);
+#else
     WaitController waitCtrl(cycles);
     getInstance()->pushController(&waitCtrl);
     waitCtrl.wait();
+#endif
 }
 
 void EventHandler::setControllerDone(bool done) { controllerDone = done; }     /**< Sets the controller exit flag for the event handler */
