@@ -259,6 +259,14 @@
     row.appendChild(b);
   }
 
+  // Ziffernzeile 1–9, 0 (oben)
+  var numRow = makeRow();
+  for (var d = 1; d <= 9; d++) {
+    (function (n) { addCmd(numRow, String(n), '', '', function () { pressDigit(n); }); })(d);
+  }
+  addCmd(numRow, '0', '', '', function () { pressDigit(0); });
+  kb.appendChild(numRow);
+
   // Buchstaben-Zeilen (QWERTZ)
   ROWS.forEach(function (keys) {
     var row = makeRow();
@@ -268,19 +276,11 @@
     kb.appendChild(row);
   });
 
-  // Ziffernzeile 1–9, 0
-  var numRow = makeRow();
-  for (var d = 1; d <= 9; d++) {
-    (function (n) { addCmd(numRow, String(n), '', '', function () { pressDigit(n); }); })(d);
-  }
-  addCmd(numRow, '0', '', '', function () { pressDigit(0); });
-  kb.appendChild(numRow);
-
-  // Sondertasten: Enter, Leerzeichen, Esc
+  // Sondertasten: Esc links, Leerzeichen Mitte, Enter rechts
   var specRow = makeRow();
-  addCmd(specRow, '↵', 'Enter',  'wide',  function () { sendKey(SPECIAL.enter); });
-  addCmd(specRow, '␣', 'Warten', 'xwide', function () { sendKey(SPECIAL.space); });
-  addCmd(specRow, 'Esc', 'Abbr.', 'wide', function () { sendKey(SPECIAL.esc); });
+  addCmd(specRow, 'Esc', 'Abbr.',  'wide',  function () { sendKey(SPECIAL.esc); });
+  addCmd(specRow, '␣',   'Warten', 'xwide', function () { sendKey(SPECIAL.space); });
+  addCmd(specRow, '↵',   'Enter',  'wide',  function () { sendKey(SPECIAL.enter); });
   kb.appendChild(specRow);
 
   // Physische Tastatureingaben lösen ebenfalls einen Spielstand-Upload aus.
