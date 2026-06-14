@@ -180,9 +180,10 @@ void GameController::init() {
 
     TRACE(gameDbg, "gameInit() running.");
 
+    fprintf(stderr,"INIT 0: Loading Game start\n");
     screen->fillRect(0, 0, screen->width(), screen->height(), 0, 0, 0);
-    screenTextAt(13, 11, "Loading Game...");    
-    screenRedrawScreen();    
+    screenTextAt(13, 11, "Loading Game...");
+    screenRedrawScreen();
     ProgressBar pb((320/2) - (200/2), (200/2), 200, 10, 0, 4);
     pb.setBorderColor(240, 240, 240);
     pb.setBorderWidth(1);
@@ -290,12 +291,20 @@ void GameController::init() {
 
     ++pb;
 
+    fprintf(stderr,"STEP A: vor musicMgr->play\n");
     musicMgr->play();
-    imageMgr->get(BKGD_BORDERS)->image->draw(0, 0);
+    fprintf(stderr,"STEP B: vor BKGD_BORDERS\n");
+    ImageInfo *bordersInfo = imageMgr->get(BKGD_BORDERS);
+    fprintf(stderr,"STEP C: bordersInfo=%p\n", (void*)bordersInfo);
+    if (bordersInfo && bordersInfo->image)
+        bordersInfo->image->draw(0, 0);
+    fprintf(stderr,"STEP D: vor stats->update\n");
     c->stats->update(); /* draw the party stats */
 
+    fprintf(stderr,"STEP E: vor screenMessage\n");
     screenMessage("Press Alt-h for help\n");
     screenPrompt();
+    fprintf(stderr,"STEP F: init abgeschlossen\n");
 
     TRACE_LOCAL(gameDbg, "Settings up reagent menu."); 
     c->stats->resetReagentsMenu();
