@@ -62,7 +62,7 @@
     var btn = this;
     btn.disabled = true;
     btn.textContent = '⏳ …';
-    await uploadSave();
+    await uploadSave(true); // force = true, ignoriert Deduplizierung
     btn.disabled = false;
     btn.textContent = '💾 Speichern';
   });
@@ -166,14 +166,14 @@
   var saveTimer = null;
   function persistSoon() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(uploadSave, 1500);
+    saveTimer = setTimeout(function () { uploadSave(false); }, 1500);
   }
-  async function uploadSave() {
+  async function uploadSave(force) {
     if (!Module.FS || !engineRunning) return;
     var blob = packSave(Module.FS);
     if (!blob) return;
     var sig = blob.length + ':' + (blob[blob.length - 1] | 0) + ':' + (blob[0] | 0);
-    if (sig === lastUploadedSig) return; // nichts geändert
+    if (!force && sig === lastUploadedSig) return; // nichts geändert
     try {
       var r = await api('api/save', {
         method: 'PUT',
@@ -228,30 +228,60 @@
     btn.addEventListener('click', function () { sendKey(SPECIAL[btn.getAttribute('data-key')]); });
   });
 
-  var COMMANDS = [
-    ['A', 'Angriff'], ['B', 'Besteigen'], ['C', 'Zauber'], ['D', 'Hinab'],
-    ['E', 'Betreten'], ['F', 'Feuern'], ['G', 'Nehmen'], ['H', 'Lager'],
-    ['I', 'Fackel'], ['J', 'Knacken'], ['K', 'Klettern'], ['L', 'Schauen'],
-    ['M', 'Mischen'], ['N', 'Reihenf.'], ['O', 'Öffnen'], ['P', 'Spähen'],
-    ['Q', 'Speichern'], ['R', 'Waffe'], ['S', 'Suchen'], ['T', 'Reden'],
-    ['U', 'Benutzen'], ['V', 'Lautst.'], ['W', 'Rüstung'], ['X', 'Absteigen'],
-    ['Y', 'Rufen'], ['Z', 'Werte'],
+  // ------------------------------------------- QWERTZ-Tastatur aufbauen
+  var XU4 = {
+    A:'Angriff', B:'Besteigen', C:'Zauber', D:'Hinab',
+    E:'Betreten', F:'Feuern', G:'Nehmen', H:'Lager',
+    I:'Fackel', J:'Knacken', K:'Klettern', L:'Schauen',
+    M:'Mischen', N:'Reihenf.', O:'Öffnen', P:'Spähen',
+    Q:'Speichern', R:'Waffe', S:'Suchen', T:'Reden',
+    U:'Benutzen', V:'Lautst.', W:'Rüstung', X:'Absteigen',
+    Y:'Rufen', Z:'Werte',
+  };
+  var ROWS = [
+    ['Q','W','E','R','T','Z','U','I','O','P'],
+    ['A','S','D','F','G','H','J','K','L'],
+    ['Y','X','C','V','B','N','M'],
   ];
-  var grid = document.getElementById('commands');
-  function addButton(label, sub, onclick) {
+  var kb = document.getElementById('keyboard');
+
+  function makeRow(extraClass) {
+    var row = document.createElement('div');
+    row.className = 'kb-row' + (extraClass ? ' ' + extraClass : '');
+    return row;
+  }
+  function addCmd(row, label, sub, cls, onclick) {
     var b = document.createElement('button');
-    b.className = 'cmd';
-    b.innerHTML = '<span class="k">' + label + '</span><span class="s">' + sub + '</span>';
+    b.className = 'cmd' + (cls ? ' ' + cls : '');
+    b.innerHTML = '<span class="k">' + label + '</span>' +
+                  (sub ? '<span class="s">' + sub + '</span>' : '');
     b.addEventListener('click', onclick);
-    grid.appendChild(b);
+    row.appendChild(b);
   }
-  COMMANDS.forEach(function (c) { addButton(c[0], c[1], function () { pressLetter(c[0]); }); });
-  addButton('↵', 'Enter', function () { sendKey(SPECIAL.enter); });
-  addButton('␣', 'Warten', function () { sendKey(SPECIAL.space); });
-  addButton('Esc', 'Abbr.', function () { sendKey(SPECIAL.esc); });
-  for (var d = 1; d <= 8; d++) {
-    (function (n) { addButton(String(n), '', function () { pressDigit(n); }); })(d);
+
+  // Buchstaben-Zeilen (QWERTZ)
+  ROWS.forEach(function (keys) {
+    var row = makeRow();
+    keys.forEach(function (ch) {
+      addCmd(row, ch, XU4[ch] || '', '', function () { pressLetter(ch); });
+    });
+    kb.appendChild(row);
+  });
+
+  // Ziffernzeile 1–9, 0
+  var numRow = makeRow();
+  for (var d = 1; d <= 9; d++) {
+    (function (n) { addCmd(numRow, String(n), '', '', function () { pressDigit(n); }); })(d);
   }
+  addCmd(numRow, '0', '', '', function () { pressDigit(0); });
+  kb.appendChild(numRow);
+
+  // Sondertasten: Enter, Leerzeichen, Esc
+  var specRow = makeRow();
+  addCmd(specRow, '↵', 'Enter',  'wide',  function () { sendKey(SPECIAL.enter); });
+  addCmd(specRow, '␣', 'Warten', 'xwide', function () { sendKey(SPECIAL.space); });
+  addCmd(specRow, 'Esc', 'Abbr.', 'wide', function () { sendKey(SPECIAL.esc); });
+  kb.appendChild(specRow);
 
   // Physische Tastatureingaben lösen ebenfalls einen Spielstand-Upload aus.
   // (Touch-Buttons rufen persistSoon() bereits über sendKey() auf.)

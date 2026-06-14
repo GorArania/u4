@@ -87,24 +87,67 @@ html, body {
   letter-spacing: 0.05em;
 }
 
-/* Steuerung */
+/* Steuerung – Tastatur oben, Richtungskreuz darunter */
 #controls {
   flex: 0 0 auto;
   display: flex;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.3rem;
   background: #14101e;
   border-top: 1px solid #4a3c6e;
-  align-items: center;
 }
 
-/* Steuerkreuz – 3x3-Raster */
-#dpad {
-  flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: repeat(3, 2.6rem);
-  grid-template-rows: repeat(3, 2.6rem);
+/* QWERTZ-Tastatur */
+#keyboard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   gap: 3px;
+}
+
+.kb-row {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+}
+
+.cmd {
+  flex: 1 1 0;
+  height: 2.8rem;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  background: #1f1830;
+  color: #e8e2d0;
+  border: 1px solid #4a3c6e;
+  border-radius: 5px;
+  padding: 2px 1px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  min-width: 0;
+  touch-action: manipulation;
+}
+.cmd .k { font-weight: bold; color: #d8b94a; font-size: 0.88rem; line-height: 1.2; }
+.cmd .s { font-size: 0.58rem; color: #9d92b8; line-height: 1; }
+.cmd:active { background: #d8b94a; color: #14101e; }
+.cmd:active .k { color: #14101e; }
+.cmd:active .s { color: #14101e; }
+
+/* breitere Sondertasten in der unteren Reihe */
+.cmd.wide { flex: 2 1 0; }
+.cmd.xwide { flex: 3 1 0; }
+
+/* Steuerkreuz */
+#dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 3rem);
+  grid-template-rows: repeat(3, 3rem);
+  gap: 4px;
+  margin-top: 0.2rem;
 }
 #dpad .dir[data-key="up"]    { grid-area: 1 / 2; }
 #dpad .dir[data-key="left"]  { grid-area: 2 / 1; }
@@ -113,43 +156,17 @@ html, body {
 #dpad .dir[data-key="down"]  { grid-area: 3 / 2; }
 
 .dir {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   background: #2a2140;
   color: #d8b94a;
   border: 1px solid #4a3c6e;
   border-radius: 6px;
+  touch-action: manipulation;
 }
 .dir:active { background: #d8b94a; color: #14101e; }
 
-/* Befehlsraster */
-#commands {
-  flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(2.2rem, 1fr));
-  gap: 3px;
-  max-height: 8.4rem;
-  overflow-y: auto;
-}
-
-.cmd {
-  height: 2.6rem;
-  font-size: 0.72rem;
-  line-height: 1.05;
-  background: #1f1830;
-  color: #e8e2d0;
-  border: 1px solid #4a3c6e;
-  border-radius: 5px;
-  padding: 2px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.cmd .k { font-weight: bold; color: #d8b94a; font-size: 0.85rem; }
-.cmd:active { background: #d8b94a; color: #14101e; }
-
-/* Auf breiten Schirmen (Desktop) die Touch-Steuerung kompakter zeigen */
-@media (min-width: 900px) {
-  #commands { max-height: 6rem; }
+/* Im Querformat Tasten etwas schmaler */
+@media (max-height: 500px) {
+  .cmd { height: 2.2rem; }
+  #dpad { grid-template-columns: repeat(3, 2.6rem); grid-template-rows: repeat(3, 2.6rem); }
 }
