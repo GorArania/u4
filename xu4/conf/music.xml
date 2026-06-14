@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <!-- $Id: music.xml,v 1.4 2004/05/15 20:44:41 dougday Exp $ -->
 <music>
-    <track file="Wanderer.mid"/>
-    <track file="Towns.mid"/>
-    <track file="Shrines.mid"/>
-    <track file="Shopping.mid"/>
-    <track file="Rule_Britannia.mid"/>
-    <track file="Fanfare_Of_Lord_British.mid"/>
-    <track file="Dungeon.mid"/>
-    <track file="Combat.mid"/>
-    <track file="Castles.mid"/>
+    <track file="Wanderer.ogg"/>
+    <track file="Towns.ogg"/>
+    <track file="Shrines.ogg"/>
+    <track file="Shopping.ogg"/>
+    <track file="Rule_Britannia.ogg"/>
+    <track file="Fanfare_Of_Lord_British.ogg"/>
+    <track file="Dungeon.ogg"/>
+    <track file="Combat.ogg"/>
+    <track file="Castles.ogg"/>
 </music>

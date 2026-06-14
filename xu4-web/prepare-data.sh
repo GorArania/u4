@@ -32,7 +32,7 @@ fi
 cp "$XU4"/conf/*.xml "$DATA/conf/" 2>/dev/null || true
 mkdir -p "$DATA/conf/dtd" && cp "$XU4"/conf/dtd/* "$DATA/conf/dtd/" 2>/dev/null || true
 cp -r "$XU4"/graphics/* "$DATA/graphics/" 2>/dev/null || true
-cp "$XU4"/mid/*.mid "$DATA/mid/" 2>/dev/null || true
+cp "$XU4"/mid/*.mid "$DATA/mid/" 2>/dev/null; cp "$XU4"/mid/*.ogg "$DATA/mid/" 2>/dev/null || true
 cp "$XU4"/sound/* "$DATA/sound/" 2>/dev/null || true
 
 echo "Daten zusammengestellt unter $DATA"
