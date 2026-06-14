@@ -1,67 +1,75 @@
-# xu4-web – Ultima IV (xu4-Engine) im Browser via WebAssembly
+# xu4-web – Ultima IV im Browser (WebAssembly)
 
-Ziel: Die moderne **xu4**-Engine (Quellcode unter `../xu4`) nach WebAssembly
-kompilieren, damit Ultima IV mit **VGA-Grafik, Musik und Touch-Steuerung**
-auf dem Handy im Browser läuft – als Alternative zur DOS-Version (die wegen
-des Musik-Treibers INT 66h nicht browser-tauglich ist).
+Die **xu4**-Engine (Quellcode unter `../xu4`) nach WebAssembly kompiliert, damit
+Ultima IV mit Grafik, **Musik** und **Touch-Steuerung** im Browser läuft – inkl.
+**Anmeldung und Spielständen pro Benutzer** auf dem Server.
 
-## Stand
+## Was funktioniert
 
-| Schritt | Status |
-| --- | --- |
-| Emscripten-Toolchain + libxml2 (WASM) | ✅ |
-| xu4-Quellcode nach WASM kompilieren + linken (79 Objekte → `u4.wasm`) | ✅ |
-| Engine lädt Konfiguration + alle Spieldaten | ✅ |
-| Web-Oberfläche: Canvas + Touch-Steuerung (Steuerkreuz + Befehlsraster) | ✅ (rendert) |
-| Spiel rendert Grafik | ⛔ **offen** – siehe unten |
+- Animierte Intro-Sequenz, Hauptmenü, Charaktererschaffung, Spielsteuerung
+- Musik (von MIDI nach OGG vorgerendert)
+- Touch-Oberfläche: Steuerkreuz + Befehlsraster (fast jeder Buchstabe ein Befehl)
+- **Anmeldung (Login/Passwort)** und **Spielstände pro Benutzer in SQLite** –
+  mehrere Leute können geräteübergreifend weiterspielen
 
-### Verbleibender Blocker: Paletten-Surfaces
+## Auf dem Server betreiben (Raspberry Pi, Apache + PHP)
 
-xu4 rendert intern über **8-Bit-indizierte SDL-Surfaces mit Paletten**
-(EGA 16 Farben / VGA 256 Farben, dazu Paletten-Effekte). Emscriptens
-SDL-1.2-Emulation unterstützt **keine** indizierten Surfaces – sie behandelt
-alles als 32-Bit-RGBA, der Paletten-Pfad ist auskommentiert und ruft an einer
-Stelle sogar `abort()` auf (`src/lib/libsdl.js`). Folge: Beim ersten
-Pixel-Schreiben (`Image::putPixelIndex`, ausgelöst vom Laden von
-`CHARSET.EGA`) greift xu4 auf einen nicht angelegten Puffer einer
-`SDL_HWSURFACE` zu → Segfault.
+Es werden **keine** weiteren Dienste benötigt (kein Node, keine js-dos). Die
+gebauten Dateien (`web/u4.js`, `web/u4.wasm`, `web/u4.data`) sind eingecheckt.
 
-**Lösung (nächster Schritt):** Die Bild-/Paletten-Schicht in
-`../xu4/src/image_sdl.cpp` so umbauen, dass „indizierte" Bilder als 32-Bit-RGBA
-gehalten werden: Pixel als Index + separat gespeicherte Palette puffern und
-beim Setzen der Palette bzw. vor dem Blit nach RGBA auflösen. Damit entfällt
-die Abhängigkeit von Emscriptens fehlender Paletten-Unterstützung.
+```bash
+# 1) Neuesten Stand holen
+cd /var/www/html/Ultima4
+git pull
 
-Diagnose-Werkzeug dafür ist vorhanden: headless Chromium (puppeteer-core)
-lädt die Seite und macht Screenshots – analog zum Vorgehen bei der DOS-Version.
+# 2) PHP sicherstellen (für Anmeldung/Spielstände)
+sudo apt install -y php php-sqlite3 libapache2-mod-php
 
-## Bauen
+# 3) Apache einrichten (liefert /ultima4/ aus dem Spielordner)
+sudo cp xu4-web/apache-ultima4.conf /etc/apache2/conf-available/ultima4.conf
+sudo a2enmod rewrite
+sudo a2enconf ultima4
+sudo systemctl reload apache2
 
-Voraussetzungen: Emscripten SDK aktiviert, libxml2 als WASM-Statiklib
-(`$LIBXML2_WASM`, Standard `/opt/libxml2-wasm`).
+# 4) Schreibrechte für die Spielstand-Datenbank
+sudo chown -R www-data: /var/www/html/Ultima4/xu4-web/web
+```
+
+Danach läuft das Spiel unter **https://goraran.home64.de/ultima4/**.
+Beim ersten Aufruf registrieren, dann spielen – der Spielstand wird pro
+Benutzer auf dem Server gespeichert.
+
+> Hinweis: Die alte DOS/js-dos-Version (Ordner `public/`, `server.js`, `lib/`)
+> wird nicht mehr gebraucht. Wer den `/ultima4/`-Alias bisher dorthin zeigen
+> ließ, ersetzt ihn durch die neue Konfiguration oben.
+
+## Neu bauen (nur bei Code-/Daten-Änderungen)
+
+Voraussetzungen: Emscripten SDK, libxml2 als WASM-Statiklib, fluidsynth +
+GM-Soundfont + ffmpeg (für die Musik). Siehe die Skripte:
 
 ```bash
 source /opt/emsdk/emsdk_env.sh
-./prepare-data.sh   # stellt dist/data/ aus ../game und ../xu4 zusammen
-./build.sh          # kompiliert + linkt nach web/u4.{js,wasm,data}
-```
-
-Lokal testen:
-
-```bash
-cd web && python3 -m http.server 8090   # dann http://localhost:8090/
+./convert-music.sh    # MIDI -> OGG (einmalig; Ergebnisse sind eingecheckt)
+./prepare-data.sh     # Datenverzeichnis zusammenstellen
+./build.sh            # nach web/u4.{js,wasm,data} bauen
 ```
 
 ## Aufbau
 
-- `../xu4/` – xu4-Engine-Quellcode (mit den Portierungs-Fixes für Clang/WASM)
-- `web/` – Frontend: `index.html`, `xu4.css`, `xu4-ui.js` (Touch-Steuerung,
-  Tastatur-Injektion, Spielstand-Persistenz über IDBFS)
-- `prepare-data.sh` – baut das Datenverzeichnis (originale U4-Daten + VGA-Upgrade
-  als `u4upgrad.zip` + Engine-Daten)
-- `build.sh` – Emscripten-Build
-- `dist/` – Build-Artefakte (nicht eingecheckt)
+- `web/` – Frontend + gebautes Spiel + PHP-API
+  - `index.html`, `xu4.css`, `xu4-ui.js` – Oberfläche, Steuerung, Anmeldung,
+    Spielstand-Sync
+  - `api.php`, `.htaccess` – Anmeldung + Spielstände (SQLite unter `web/data/`)
+  - `u4.js`, `u4.wasm`, `u4.data` – das gebaute WebAssembly-Spiel
+  - `router.php` – nur für lokales Testen mit `php -S`
+- `build.sh`, `prepare-data.sh`, `convert-music.sh` – Build-Werkzeuge
+- `web_sdl_timer.js`, `apache-ultima4.conf` – Build-/Deploy-Bausteine
 
-Die WASM-Build-Artefakte (`web/u4.js`, `web/u4.wasm`, `web/u4.data`) werden
-nicht eingecheckt – sie enthalten die urheberrechtlich geschützten Spieldaten
-und werden lokal vom Build erzeugt.
+## Technische Hinweise zur Portierung
+
+Emscriptens SDL-1.2-Emulation erforderte mehrere Anpassungen (in `../xu4/src`):
+indizierte Bilder als 32-Bit-RGBA mit eigener Palette; Surfaces vor Pixel-
+zugriff sperren und vor Blits entsperren (Canvas-Sync); `SDL_AddTimer` als
+periodischen Timer (`web_sdl_timer.js`); blockierende Hauptschleife via
+ASYNCIFY. Details in der Git-Historie.

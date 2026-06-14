@@ -1,5 +1,6 @@
+# Zwischen-Build (Objektdateien, aufbereitete Daten)
 dist/
-web/u4.js
-web/u4.wasm
-web/u4.data
+# Laufzeit-Datenbank/Spielstände (nicht einchecken)
 web/data/
+# Build-Artefakte (web/u4.js, web/u4.wasm, web/u4.data) werden bewusst
+# EINGECHECKT, damit das Spiel per "git pull" ohne Emscripten-Build läuft.
