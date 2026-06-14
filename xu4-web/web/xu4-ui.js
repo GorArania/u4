@@ -243,6 +243,17 @@
     (function (n) { addButton(String(n), '', function () { pressDigit(n); }); })(d);
   }
 
+  // Physische Tastatureingaben lösen ebenfalls einen Spielstand-Upload aus.
+  // (Touch-Buttons rufen persistSoon() bereits über sendKey() auf.)
+  document.addEventListener('keyup', function () {
+    if (engineRunning) persistSoon();
+  });
+
+  // Zusätzlicher periodischer Upload alle 60 s als Sicherheitsnetz
+  setInterval(function () {
+    if (engineRunning) uploadSave();
+  }, 60000);
+
   // Bestehende Sitzung weiterverwenden?
   enterGame().catch(function () { authScreen.hidden = false; });
 })();

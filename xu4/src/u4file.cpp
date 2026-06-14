@@ -195,6 +195,12 @@ void U4ZipPackageMgr::add(U4ZipPackage *package) {
 }
 
 U4ZipPackageMgr::U4ZipPackageMgr() {
+#ifndef __EMSCRIPTEN__
+    /* In the WASM build all game files are already extracted to the virtual
+       filesystem (--preload-file dist/data@/).  The zip translation tables
+       redirect e.g. "start.ega" → "start.old" which picks up the 4-bit EGA
+       backup instead of the 8-bit VGA replacement – so we skip zip packages
+       entirely for the WASM build and let u4fopen find files on the FS. */
     string upg_pathname(u4find_path("u4upgrad.zip", zip_paths, sizeof(zip_paths) / sizeof(zip_paths[0])));
     if (!upg_pathname.empty()) {
         /* upgrade zip is present */
@@ -240,6 +246,7 @@ U4ZipPackageMgr::U4ZipPackageMgr() {
             add(new U4ZipPackage(pathname, "ultima4/", false));
         }
     }
+#endif /* !__EMSCRIPTEN__ */
 
     /* scan for extensions */
 }
