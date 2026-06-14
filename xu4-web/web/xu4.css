@@ -54,6 +54,8 @@ html, body {
   padding: 0.4rem 0.8rem; background: #14101e; border-bottom: 1px solid #4a3c6e;
 }
 #topbar button { padding: 0.4rem 0.8rem; border: 1px solid #4a3c6e; border-radius: 4px; cursor: pointer; }
+#save-btn { background: #d8b94a; color: #14101e; font-weight: bold; border-color: #d8b94a; }
+#save-btn:disabled { opacity: 0.6; cursor: wait; }
 #player-name { font-weight: bold; color: #d8b94a; }
 #save-info { font-size: 0.8rem; color: #9d92b8; }
 .spacer { flex: 1; }

@@ -58,6 +58,15 @@
     }
   });
 
+  document.getElementById('save-btn').addEventListener('click', async function () {
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = '⏳ …';
+    await uploadSave();
+    btn.disabled = false;
+    btn.textContent = '💾 Speichern';
+  });
+
   document.getElementById('logout-btn').addEventListener('click', async function () {
     await api('api/logout', { method: 'POST' }).catch(function () {});
     location.reload(); // sauberer Neustart der WASM-Instanz
@@ -237,6 +246,7 @@
     grid.appendChild(b);
   }
   COMMANDS.forEach(function (c) { addButton(c[0], c[1], function () { pressLetter(c[0]); }); });
+  addButton('↵', 'Enter', function () { sendKey(SPECIAL.enter); });
   addButton('␣', 'Warten', function () { sendKey(SPECIAL.space); });
   addButton('Esc', 'Abbr.', function () { sendKey(SPECIAL.esc); });
   for (var d = 1; d <= 8; d++) {
