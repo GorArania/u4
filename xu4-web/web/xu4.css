@@ -74,9 +74,7 @@ html, body {
 
 #canvas {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
-  /* Pixelkunst scharf skalieren */
+  /* Größe wird per JS gesetzt (fitCanvas) – Pixelkunst scharf skalieren */
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #000;
@@ -94,7 +92,7 @@ html, body {
   flex-direction: column;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.4rem 0.3rem;
+  padding: 0.4rem 0; /* kein horizontales Padding – Tastatur füllt volle Breite */
   background: #14101e;
   border-top: 1px solid #4a3c6e;
 }
