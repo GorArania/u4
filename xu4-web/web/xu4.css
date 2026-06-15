@@ -74,7 +74,12 @@ html, body {
 
 #canvas {
   display: block;
-  /* Größe wird per JS gesetzt (fitCanvas) – Pixelkunst scharf skalieren */
+  /* Canvas füllt den verfügbaren Bereich; object-fit skaliert das Spielbild
+     unter Beibehaltung des Seitenverhältnisses (Vollbreite am Handy,
+     Vollhöhe am Desktop). !important schlägt Emscriptens Inline-Styles. */
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #000;

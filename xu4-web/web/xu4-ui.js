@@ -294,33 +294,8 @@
     if (engineRunning) uploadSave();
   }, 60000);
 
-  // ----------------------------------------- Canvas-Skalierung
-  // SDL setzt canvas.width/canvas.height (Pixelauflösung) und überschreibt
-  // gleichzeitig canvas.style.width/height mit festen Pixelwerten.
-  // fitCanvas() berechnet die größtmögliche CSS-Darstellungsgröße, die ins
-  // #screen-wrap passt, ohne das Seitenverhältnis zu verzerren.
-  function fitCanvas() {
-    var w = canvas.width;
-    var h = canvas.height;
-    if (!w || !h || (w === 300 && h === 150)) return; // Standardgröße = noch nicht initialisiert
-    var wrap = document.getElementById('screen-wrap');
-    var maxW = wrap.clientWidth;
-    var maxH = wrap.clientHeight;
-    if (!maxW || !maxH) return;
-    var scale = Math.min(maxW / w, maxH / h);
-    canvas.style.width  = Math.round(w * scale) + 'px';
-    canvas.style.height = Math.round(h * scale) + 'px';
-  }
-
-  // Wenn SDL_SetVideoMode() canvas.width/height setzt → sofort skalieren
-  new MutationObserver(function () {
-    requestAnimationFrame(fitCanvas);
-  }).observe(canvas, { attributes: true, attributeFilter: ['width', 'height'] });
-
-  // Bei Bildschirmdrehung oder Fenstergrößenänderung neu skalieren
-  window.addEventListener('resize', function () {
-    requestAnimationFrame(fitCanvas);
-  });
+  // Die Canvas-Skalierung übernimmt jetzt komplett CSS (object-fit:contain),
+  // das ist deutlich robuster als gegen Emscriptens Inline-Styles anzukämpfen.
 
   // Bestehende Sitzung weiterverwenden?
   enterGame().catch(function () { authScreen.hidden = false; });
