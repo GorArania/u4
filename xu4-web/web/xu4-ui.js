@@ -87,6 +87,15 @@
   }
 
   // -------------------------------------------- Emscripten-Module + Engine
+  // buildVer: Versions-Tag, das an u4.js, u4.wasm UND u4.data als ?v= gehängt
+  // wird. Die drei gehören zusammen -- u4.js enthält die Byte-Offsets aller
+  // Dateien in u4.data und die Anbindung an u4.wasm. Eine gemischte
+  // Kombination aus Cache und Server ergibt Datenmüll oder einen Ladefehler.
+  // Ohne ?v= darf der Browser Dateien ohne Cache-Control nach eigener
+  // Schätzung (ca. 10 % ihres Alters) für gültig halten und fragt tagelang
+  // nicht beim Server nach -- genau so wurde ein Fix schon einmal unsichtbar.
+  var buildVer = 'init';
+
   window.Module = {
     canvas: canvas,
     noInitialRun: true, // Start erst nach Wiederherstellen des Spielstands
@@ -94,11 +103,24 @@
     print: function (t) { console.log(t); },
     printErr: function (t) { console.warn(t); },
     onRuntimeInitialized: function () { startEngine(); },
+    locateFile: function (path) {
+      if (path === 'u4.data' || path === 'u4.wasm') return path + '?v=' + buildVer;
+      return path;
+    },
   };
 
-  function loadEngine() {
+  async function loadEngine() {
+    // Versions-Tag aus dem Last-Modified-Header von u4.js ermitteln. u4.js
+    // wird vom Linker immer gemeinsam mit u4.wasm und u4.data geschrieben,
+    // ein Tag genügt deshalb für alle drei. cache:'no-store' stellt sicher,
+    // dass diese Abfrage selbst nicht aus dem Cache beantwortet wird.
+    try {
+      var hres = await fetch('u4.js', { method: 'HEAD', cache: 'no-store' });
+      buildVer = hres.headers.get('last-modified') || hres.headers.get('etag') || Date.now();
+      buildVer = encodeURIComponent(buildVer);
+    } catch (e) { buildVer = Date.now(); }
     var s = document.createElement('script');
-    s.src = 'u4.js';
+    s.src = 'u4.js?v=' + buildVer;
     document.body.appendChild(s);
   }
 

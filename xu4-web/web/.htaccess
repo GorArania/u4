@@ -8,3 +8,20 @@ RewriteRule ^api/(.+)$ api.php?r=$1 [QSA,L]
 <FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm)$">
     Require all denied
 </FilesMatch>
+
+# Die drei Build-Artefakte immer per ETag validieren (304 wenn unverändert,
+# 200 wenn neu). Wichtig: u4.js, u4.wasm und u4.data gehören zusammen – u4.js
+# enthält die Byte-Offsets aller Dateien in u4.data und die WASM-Anbindung.
+# Ein aus dem Cache bedientes altes u4.js mit neuem u4.wasm/u4.data ergibt
+# Datenmüll oder einen Ladefehler.
+<FilesMatch "^u4\.(js|wasm|data)$">
+    Header always set Cache-Control "no-cache"
+</FilesMatch>
+
+# index.html ist der Einstieg und trägt die ?v=-Marken für alle übrigen
+# Dateien. Wird sie aus dem Cache bedient, kommt kein Update durch -- die
+# <meta http-equiv="Cache-Control">-Angaben in der Seite selbst ignorieren
+# Browser für Caching-Entscheidungen.
+<FilesMatch "\.html$">
+    Header always set Cache-Control "no-cache"
+</FilesMatch>
