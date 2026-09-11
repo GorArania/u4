@@ -51,13 +51,20 @@ weiterentwickelt. Technische Einschränkungen:
 
 ## Schnellstart (xu4-web, empfohlen)
 
-Voraussetzungen: Apache, PHP ≥ 7.4 mit `pdo_sqlite`, `mod_rewrite`.
-Die gebauten WebAssembly-Dateien (`u4.js`, `u4.wasm`, `u4.data`) sind bereits
-im Repository enthalten — kein Build-Schritt nötig.
+Voraussetzungen: Apache mit `mod_rewrite` und `mod_headers`, PHP ≥ 7.4 mit
+`pdo_sqlite`. `mod_headers` ist zwingend — ohne es scheitert Apache an den
+`Header`-Anweisungen in `xu4-web/web/.htaccess` und liefert bei jedem Aufruf
+einen Fehler 500.
+
+Ein Build-Schritt ist **nicht** nötig: die gebauten WebAssembly-Dateien
+(`u4.js`, `u4.wasm`, `u4.data`) sind eingecheckt, und `u4.data` enthält auch
+die Spieldateien. Eine Datenbank muss ebenfalls niemand anlegen — SQLite
+braucht keinen Server, und `api.php` erzeugt `xu4-web/web/data/xu4web.sqlite`
+samt Tabellen bei der ersten Anfrage selbst.
 
 ```bash
 # 1) Repository klonen
-git clone https://github.com/GorArania/u4.git /var/www/html/Ultima4
+git clone https://github.com/GorArania/UltimaIV.git /var/www/html/Ultima4
 cd /var/www/html/Ultima4
 
 # 2) PHP sicherstellen
@@ -65,19 +72,23 @@ sudo apt install -y php php-sqlite3 libapache2-mod-php
 
 # 3) Apache einrichten
 sudo cp xu4-web/apache-ultima4.conf /etc/apache2/conf-available/ultima4.conf
-sudo a2enmod rewrite
+sudo a2enmod rewrite headers
 sudo a2enconf ultima4
 sudo systemctl reload apache2
 
 # 4) Schreibrechte für Datenbank und Spielstände
 sudo chown -R www-data: /var/www/html/Ultima4/xu4-web/web
-
-# 5) Original-DOS-Dateien ablegen (nicht im Repo enthalten)
-#    Die Dateien aus einem legalen Ultima IV DOS-Release in game/ kopieren
 ```
 
 Danach läuft das Spiel unter `https://<deine-domain>/ultima4/`.
 Beim ersten Aufruf registrieren, dann spielen.
+
+Das war alles. Die Original-DOS-Dateien muss man **nicht** besorgen: sie
+stecken in `u4.data`, und die aktive Version greift auf den Ordner `game/`
+überhaupt nicht zu. Gebraucht wird er nur für einen Neubau (siehe unten) und
+für den Karten-Editor unter `public/`, der seine VGA-Grafikdateien dorthin
+entpackt, ohne das Verzeichnis selbst anzulegen — dafür einmal
+`mkdir -p game && sudo chown www-data: game`.
 
 ---
 
@@ -165,7 +176,12 @@ Die gebauten WASM-Dateien sind bereits eingecheckt. Ein Neubau ist nur
 nötig, wenn der C++-Code oder die Spieldaten geändert wurden.
 
 Voraussetzungen: Emscripten SDK, libxml2 als WASM-Statiklib, fluidsynth +
-GM-Soundfont + ffmpeg (für die Musik).
+GM-Soundfont + ffmpeg (für die Musik). Dazu die Original-DOS-Dateien in
+`game/` — `prepare-data.sh` stellt daraus das Datenverzeichnis zusammen.
+
+Auf einem Raspberry Pi (arm64) läuft der Build direkt: `./emsdk install
+latest-arm64-linux`. Gelinkt wird mit `em++`, nicht mit `emcc` — neuere
+Emscripten-Versionen ziehen libc++ beim Linken nicht mehr automatisch dazu.
 
 ```bash
 source /opt/emsdk/emsdk_env.sh
@@ -194,8 +210,11 @@ Details in der Git-Historie und in `xu4-web/README.md`.
 ## Copyright-Hinweis
 
 Ultima IV: Quest of the Avatar ist © 1987 Origin Systems / Electronic Arts.
-Die Originalspieldateien sind nicht im Repository enthalten. Das Spiel ist
-als Freeware freigegeben und kann legal heruntergeladen werden, z. B. bei
-[GOG.com](https://www.gog.com/game/ultima_4).
+Das Spiel wurde als Freeware freigegeben und kann legal heruntergeladen
+werden, z. B. bei [GOG.com](https://www.gog.com/game/ultima_4).
+
+Der Ordner `game/` mit den DOS-Dateien liegt nicht im Repository. Das
+eingecheckte `u4.data` enthält sie allerdings eingebettet (248 Dateien plus
+das VGA-Upgrade-ZIP) — anders könnte das Spiel im Browser nicht laufen.
 
 xu4 ist Open Source (GPL), Quellcode: [xu4.sourceforge.net](https://xu4.sourceforge.net)
