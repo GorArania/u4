@@ -9,7 +9,8 @@
  * Benötigt: PHP >= 7.4 mit pdo_sqlite (php-sqlite3) und ZipArchive (php-zip).
  */
 
-define('DATA_DIR', __DIR__ . '/../data');
+// Gemeinsame Datenbank mit dem Spiel (xu4-web/web/data/xu4web.sqlite)
+define('DATA_DIR', __DIR__ . '/../xu4-web/web/data');
 define('GAME_DIR', __DIR__ . '/../game');
 define('MAX_SAVE_BYTES', 16 * 1024 * 1024);
 define('SESSION_MAX_AGE', 30 * 24 * 60 * 60);
@@ -38,7 +39,7 @@ function db() {
         if (!is_dir(DATA_DIR)) {
             mkdir(DATA_DIR, 0775, true);
         }
-        $pdo = new PDO('sqlite:' . DATA_DIR . '/u4web.sqlite');
+        $pdo = new PDO('sqlite:' . DATA_DIR . '/xu4web.sqlite');
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $pdo->exec('PRAGMA journal_mode = WAL');
         $pdo->exec("CREATE TABLE IF NOT EXISTS users (
@@ -50,6 +51,11 @@ function db() {
         $pdo->exec("CREATE TABLE IF NOT EXISTS saves (
             user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
             data       BLOB NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS user_maps (
+            user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            worldmap   BLOB NOT NULL,
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         )");
     }
@@ -317,9 +323,9 @@ if ($route === 'me' && $method === 'GET') {
     $stmt->execute(array($user['id']));
     $save = $stmt->fetch(PDO::FETCH_ASSOC);
     json_out(array(
-        'username' => $user['username'],
+        'user'            => $user['username'],
         'gameFilesPresent' => count(list_game_files()) > 0,
-        'saveUpdatedAt' => $save ? $save['updated_at'] : null,
+        'saveUpdatedAt'   => $save ? $save['updated_at'] : null,
     ));
 }
 
@@ -373,4 +379,115 @@ if ($route === 'save' && $method === 'DELETE') {
     json_out(array('ok' => true));
 }
 
+
+// ---------------------------------------------------------------- Karten-Editor
+
+// u4.data: Emscripten-Bundle des xu4-Spiels. Offsets aus u4.js-Metadaten.
+define('U4DATA',          '/var/www/html/Ultima4/xu4-web/web/u4.data');
+define('U4_WORLDMAP_OFF', 11200748);   // /ultima4/WORLD.MAP  (65536 Bytes)
+define('U4_UPGRADE_OFF',   7840943);   // /u4upgrad.zip Start
+define('U4_UPGRADE_END',   9068647);   // /u4upgrad.zip Ende
+
+function u4data_read($offset, $length) {
+    $fh = fopen(U4DATA, 'rb');
+    if (!$fh) fail('u4.data nicht lesbar.', 500);
+    fseek($fh, $offset);
+    $data = fread($fh, $length);
+    fclose($fh);
+    return $data;
+}
+
+function u4data_write($offset, $data, $length) {
+    $fh = fopen(U4DATA, 'r+b');
+    if (!$fh) fail('u4.data nicht beschreibbar.', 500);
+    fseek($fh, $offset);
+    $written = fwrite($fh, $data, $length);
+    fclose($fh);
+    if ($written !== $length) fail('Schreiben in u4.data fehlgeschlagen.', 500);
+}
+
+// Extrahiert shapes.vga und u4vga.pal aus dem Upgrade-ZIP und cached sie.
+function ensure_vga_files() {
+    $shapesVga = GAME_DIR . '/shapes.vga';
+    $vgaPal    = GAME_DIR . '/u4vga.pal';
+    if (file_exists($shapesVga) && file_exists($vgaPal)) return;
+    $zipData = u4data_read(U4_UPGRADE_OFF, U4_UPGRADE_END - U4_UPGRADE_OFF);
+    $tmpZip  = tempnam(sys_get_temp_dir(), 'u4upg');
+    file_put_contents($tmpZip, $zipData);
+    $zip = new ZipArchive();
+    if ($zip->open($tmpZip) !== true) { unlink($tmpZip); fail('Upgrade-ZIP Fehler.', 500); }
+    if (!file_exists($shapesVga)) file_put_contents($shapesVga, $zip->getFromName('shapes.vga'));
+    if (!file_exists($vgaPal))    file_put_contents($vgaPal,    $zip->getFromName('u4vga.pal'));
+    $zip->close();
+    unlink($tmpZip);
+}
+
+if ($route === 'map' && $method === 'GET') {
+    $user = require_auth();
+    $stmt = db()->prepare('SELECT worldmap FROM user_maps WHERE user_id = ?');
+    $stmt->execute(array($user['id']));
+    $row  = $stmt->fetch(PDO::FETCH_ASSOC);
+    $data = $row ? $row['worldmap'] : u4data_read(U4_WORLDMAP_OFF, 65536);
+    header('Content-Type: application/octet-stream');
+    header('Cache-Control: no-store');
+    header('Content-Length: ' . strlen($data));
+    echo $data;
+    exit;
+}
+
+if ($route === 'map' && $method === 'PUT') {
+    $user = require_auth();
+    $data = file_get_contents('php://input');
+    if (strlen($data) !== 65536) {
+        fail('Ungueltige Map-Groesse (erwartet 65536 Bytes).', 400);
+    }
+    $stmt = db()->prepare(
+        "INSERT INTO user_maps (user_id, worldmap, updated_at) VALUES (:uid, :wm, datetime('now'))
+         ON CONFLICT(user_id) DO UPDATE SET worldmap = excluded.worldmap, updated_at = excluded.updated_at"
+    );
+    $stmt->bindValue(':uid', $user['id'], PDO::PARAM_INT);
+    $stmt->bindValue(':wm',  $data,       PDO::PARAM_LOB);
+    $stmt->execute();
+    json_out(array('ok' => true));
+}
+
+// shapes.vga: 256 Tiles × 256 Bytes (16×16 @ 8-Bit indexed), aus u4upgrad.zip
+if ($route === 'shapes' && $method === 'GET') {
+    require_auth();
+    ensure_vga_files();
+    $f = GAME_DIR . '/shapes.vga';
+    header('Content-Type: application/octet-stream');
+    header('Cache-Control: no-store');
+    header('Content-Length: ' . filesize($f));
+    readfile($f);
+    exit;
+}
+
+// u4vga.pal: 256 × RGB (6-Bit VGA, 0-63 je Kanal), aus u4upgrad.zip
+if ($route === 'shapespal' && $method === 'GET') {
+    require_auth();
+    ensure_vga_files();
+    $f = GAME_DIR . '/u4vga.pal';
+    header('Content-Type: application/octet-stream');
+    header('Cache-Control: no-store');
+    header('Content-Length: ' . filesize($f));
+    readfile($f);
+    exit;
+}
+
+if ($route === 'mapbackup' && $method === 'GET') {
+    $user = require_auth();
+    $stmt = db()->prepare('SELECT 1 FROM user_maps WHERE user_id = ?');
+    $stmt->execute(array($user['id']));
+    json_out(array('exists' => (bool)$stmt->fetch()));
+}
+
+if (($route === 'map/restore' || (strpos($route, 'map') === 0 && strpos($_SERVER['REQUEST_URI'], '/restore') !== false)) && $method === 'POST') {
+    $user = require_auth();
+    $stmt = db()->prepare('SELECT 1 FROM user_maps WHERE user_id = ?');
+    $stmt->execute(array($user['id']));
+    if (!$stmt->fetch()) fail('Keine eigene Map vorhanden.', 404);
+    db()->prepare('DELETE FROM user_maps WHERE user_id = ?')->execute(array($user['id']));
+    json_out(array('ok' => true));
+}
 fail('Unbekannter API-Pfad.', 404);

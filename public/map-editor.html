@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ultima IV – Karten-Editor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #14101e;
+      color: #e8e2d0;
+      font-family: Georgia, "Times New Roman", serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: #1f1830;
+      border-bottom: 1px solid #4a3c6e;
+      flex-wrap: wrap;
+    }
+    #topbar h1 { font-size: 1rem; color: #d8b94a; letter-spacing: .05em; }
+    #topbar a  { color: #9d92b8; text-decoration: none; font-size: .9rem; }
+    #topbar a:hover { color: #d8b94a; }
+    #topbar button {
+      padding: 5px 12px;
+      background: #d8b94a;
+      border: none;
+      border-radius: 4px;
+      color: #14101e;
+      font-size: .9rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #topbar button:disabled { opacity: .4; cursor: default; }
+    #topbar button.sec { background: #4a3c6e; color: #e8e2d0; }
+    #status { margin-left: auto; font-size: .8rem; color: #9d92b8; font-family: monospace; }
+    #status.dirty { color: #e8a030; }
+
+    #loading {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      color: #9d92b8;
+    }
+
+    #editor {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ---- Viewport ---- */
+    #vp-wrap { position: relative; flex-shrink: 0; align-self: flex-start; }
+    #viewport {
+      display: block;
+      cursor: crosshair;
+      image-rendering: pixelated;
+      border: 2px solid #4a3c6e;
+      width: 512px;
+      height: 512px;
+    }
+    #vp-info {
+      position: absolute;
+      top: 4px; left: 4px;
+      background: rgba(20,16,30,.8);
+      color: #d8b94a;
+      font-family: monospace;
+      font-size: .75rem;
+      padding: 3px 7px;
+      pointer-events: none;
+      border-radius: 3px;
+    }
+
+    /* ---- Sidebar ---- */
+    #sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 272px;
+      min-width: 272px;
+      overflow-y: auto;
+      max-height: calc(100vh - 60px);
+    }
+
+    /* ---- Minimap ---- */
+    #mm-wrap { position: relative; flex-shrink: 0; align-self: flex-start; }
+    #minimap {
+      display: block;
+      cursor: crosshair;
+      border: 2px solid #4a3c6e;
+      image-rendering: pixelated;
+      width: 256px;
+      height: 256px;
+    }
+    #mm-rect {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border: 1px solid #fff;
+      pointer-events: none;
+      top: 0; left: 0;
+    }
+
+    /* ---- Info ---- */
+    #coords { font-family: monospace; font-size: .78rem; color: #9d92b8; line-height: 1.7; }
+
+    /* ---- Palette ---- */
+    #pal-label { font-size: .8rem; color: #9d92b8; }
+    #pal-label span { color: #d8b94a; }
+    #palette {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 3px;
+    }
+    .pal-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      background: #1f1830;
+      border: 1px solid #2a2040;
+      padding: 2px 1px;
+      cursor: pointer;
+      color: #666;
+      font-size: .55rem;
+      font-family: monospace;
+      text-align: center;
+      line-height: 1.1;
+    }
+    .pal-btn canvas { image-rendering: pixelated; }
+    .pal-btn:hover { border-color: #d8b94a; color: #d8b94a; }
+    .pal-btn.sel { border-color: #d8b94a; background: #2a1f00; color: #d8b94a; }
+
+    #hint-bar { font-size: .72rem; color: #4a3c6e; line-height: 1.6; }
+
+    /* ---- Login-Overlay ---- */
+    #login-screen {
+      position: fixed; inset: 0;
+      background: #14101e;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    #login-screen.hidden { display: none; }
+    .login-box {
+      width: min(360px, 90vw);
+      padding: 2rem;
+      background: #1f1830;
+      border: 1px solid #4a3c6e;
+      border-radius: 8px;
+    }
+    .login-box h1 { text-align: center; color: #d8b94a; font-size: 2rem; letter-spacing: .05em; margin: 0; }
+    .login-subtitle { text-align: center; color: #9d92b8; font-style: italic; margin: .25rem 0 1.5rem; }
+    .login-box label { display: block; font-size: .9rem; color: #9d92b8; margin-bottom: .2rem; }
+    .login-box input {
+      display: block; width: 100%;
+      padding: .5rem; margin-bottom: .8rem;
+      background: #14101e; border: 1px solid #4a3c6e; border-radius: 4px;
+      color: #e8e2d0; font-size: 1rem;
+    }
+    .login-box button {
+      width: 100%; padding: .55rem;
+      background: #d8b94a; border: none; border-radius: 4px;
+      color: #14101e; font-size: .95rem; font-weight: bold; cursor: pointer;
+    }
+    .login-box button:disabled { opacity: .5; cursor: default; }
+    #login-error { color: #e06c5a; font-size: .9rem; margin: .3rem 0; }
+  </style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Ultima IV</h1>
+    <p class="login-subtitle">Karten-Editor &ndash; Anmeldung</p>
+    <form id="login-form">
+      <label for="login-user">Benutzername</label>
+      <input id="login-user" name="username" autocomplete="username"
+             required minlength="3" maxlength="32" pattern="[A-Za-z0-9_.\-]+" />
+      <label for="login-pass">Passwort</label>
+      <input id="login-pass" name="password" type="password"
+             autocomplete="current-password" required minlength="6" />
+      <p id="login-error" hidden></p>
+      <button type="submit" id="login-btn">Anmelden</button>
+    </form>
+  </div>
+</div>
+
+<div id="topbar">
+  <a href="index.html">&#8592; Spiel</a>
+  <h1>Ultima IV &ndash; Karten-Editor</h1>
+  <button id="save-btn" disabled>Speichern</button>
+  <button id="restore-btn" class="sec" disabled>Backup</button>
+  <span id="status">Laden&hellip;</span>
+</div>
+
+<div id="loading">Karte und Grafiken werden geladen&hellip;</div>
+
+<div id="editor" style="display:none">
+  <div id="vp-wrap">
+    <canvas id="viewport" width="512" height="512"></canvas>
+    <div id="vp-info">x:0 y:0 | Tile:0</div>
+  </div>
+
+  <div id="sidebar">
+    <div id="mm-wrap">
+      <canvas id="minimap" width="256" height="256"></canvas>
+      <div id="mm-rect"></div>
+    </div>
+
+    <div id="coords">
+      Linksklick&nbsp;/&nbsp;Ziehen:&nbsp;malen&nbsp;&nbsp;
+      Rechtsklick:&nbsp;aufnehmen<br>
+      Pfeiltasten&nbsp;(+Shift&times;8):&nbsp;scrollen&nbsp;&nbsp;
+      Minimap:&nbsp;Navigation
+    </div>
+
+    <div id="pal-label">Palette &mdash; <span id="sel-name">Gras&nbsp;(4)</span></div>
+    <div id="palette"></div>
+
+    <div id="hint-bar">
+      Nach dem Speichern das Spiel mit<br>
+      Strg+Umschalt+R (Hard-Reload) neu laden.
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ================================================================
+   VGA-Palette wird zur Laufzeit aus u4vga.pal geladen
+   (6-Bit Werte 0-63, × 255/63 → 8-Bit)
+   ================================================================ */
+let VGA_PALETTE = null; // Uint8Array(768), wird in init() gesetzt
+
+/* ================================================================
+   Tile-Namen (aus xu4 tilemap-base.xml)
+   ================================================================ */
+const TILE_NAMES = (function() {
+  const n = [];
+  for (let i = 0; i < 256; i++) n[i] = 'T:' + i;
+  const names = [
+    'Meer','Wasser','Flachwsr.','Sumpf','Gras','Buschland','Wald',
+    'Huegel','Berge','Dungeon','Grossstadt','Schloss','Stadt',
+    'LCB West','LCB Tor','LCB Ost',
+    'Schiff N','Schiff O','Schiff S','Schiff W',
+    'Pferd 1','Pferd 2','Dng-Boden','Bruecke','Ballon',
+    'Bruecke A','Bruecke B','Leiter ^','Leiter v','Ruinen','Schrein',
+    'Avatar','Magier 1','Magier 2','Barde 1','Barde 2',
+    'Kaempfer 1','Kaempfer 2','Druide 1','Druide 2',
+    'Handwerk 1','Handwerk 2','Paladin 1','Paladin 2',
+    'Ranger 1','Ranger 2','Hirt 1','Hirt 2',
+    'Saeule','Solid 1','Solid 2','Solid 3','Solid 4',
+    'Schiffsmast','Steuerrad','Felsen','Leiche',
+    'Steinwand','Schlosst.','Tuer','Truhe','Ankh',
+    'Ziegelb.','Holzb.',
+    'Mondtor 1','Mondtor 2','Mondtor 3','Mondtor',
+    'Giftfeld','Energiefeld','Feuerfeld','Schlaffeld',
+    'Solide','Geheimtuer','Altar','Lagerfeuer','Lava',
+    'Verfehlt','Magie','Treffer',
+    'Wache 1','Wache 2','Buerger 1','Buerger 2',
+    'Barde-s 1','Barde-s 2','Gaukler 1','Gaukler 2',
+    'Bettler 1','Bettler 2','Kind 1','Kind 2',
+    'Stier 1','Stier 2','LB 1','LB 2',
+  ];
+  // A-Z (96-121)
+  for (let i = 0; i < 26; i++) names.push(String.fromCharCode(65+i));
+  names.push('Space','Spacer 1','Spacer 2','Spacer 3','Schwarz','Ziegelw.');
+  // Wasser-Monster (128+)
+  const wmon = ['Piratenschiff','Piratenschiff','Piratenschiff','Piratenschiff','Nixe','Nixe','Riesenkalmar','Riesenkalmar','Seeschlange','Seeschlange','Seepferd','Seepferd','Strudel','Strudel','Sturm','Sturm'];
+  names.push(...wmon);
+  // Land-Monster (144+)
+  const lmon = ['Ratte','Ratte','Ratte','Ratte','Fledermaus','Fledermaus','Fledermaus','Fledermaus','Spinne','Spinne','Spinne','Spinne','Geist','Geist','Geist','Geist','Schleim','Schleim','Schleim','Schleim','Troll','Troll','Troll','Troll','Kobold','Kobold','Kobold','Kobold','Mimic','Mimic','Mimic','Mimic','Sensenmann','Sensenmann','Sensenmann','Sensenmann','Insekten','Insekten','Insekten','Insekten','Beobachter','Beobachter','Beobachter','Beobachter','Phantom','Phantom','Phantom','Phantom','Ork','Ork','Ork','Ork','Skelett','Skelett','Skelett','Skelett','Gauner','Gauner','Gauner','Gauner','Schlange','Schlange','Schlange','Schlange','Ettin','Ettin','Ettin','Ettin','Kopflos','Kopflos','Kopflos','Kopflos','Zyklop','Zyklop','Zyklop','Zyklop','Irrlicht','Irrlicht','Irrlicht','Irrlicht','Boeser Magier','Boeser Magier','Boeser Magier','Boeser Magier','Liche','Liche','Liche','Liche','Lava-Eidechse','Lava-Eidechse','Lava-Eidechse','Lava-Eidechse','Zorn','Zorn','Zorn','Zorn','Daemon','Daemon','Daemon','Daemon','Hydra','Hydra','Hydra','Hydra','Drache','Drache','Drache','Drache','Balron','Balron','Balron','Balron'];
+  names.push(...lmon);
+  for (let i = 0; i < names.length && i < 256; i++) n[i] = names[i];
+  return n;
+}());
+
+/* ================================================================
+   Minimap-Farben
+   ================================================================ */
+const MM_COLORS = (function() {
+  const c = [];
+  for (let i = 0; i < 256; i++) c[i] = [80, 80, 80];
+  c[0]=[0,0,100]; c[1]=[0,0,160]; c[2]=[60,60,200];
+  c[3]=[60,80,50]; c[4]=[30,150,30]; c[5]=[100,130,60];
+  c[6]=[20,80,20]; c[7]=[150,120,60]; c[8]=[120,120,120];
+  c[9]=[80,0,80]; c[10]=[220,200,0]; c[11]=[200,100,0];
+  c[12]=[220,160,0]; c[13]=[180,0,0]; c[14]=[255,0,0]; c[15]=[180,0,0];
+  for (let i = 16; i < 20; i++) c[i] = [0,100,200];
+  c[20]=c[21]=[180,100,0];
+  c[23]=[160,120,60]; c[24]=[200,200,0];
+  c[29]=[100,60,30]; c[30]=[200,0,200];
+  return c;
+}());
+
+/* ================================================================
+   Zustand
+   ================================================================ */
+let mapBytes = null;
+let tiles    = [];
+let viewX    = 0, viewY = 0;
+let selTile  = 4;
+let painting = false;
+let dirty    = false;
+
+const vpEl      = document.getElementById('viewport');
+const mmEl      = document.getElementById('minimap');
+const vpInfo    = document.getElementById('vp-info');
+const mmRect    = document.getElementById('mm-rect');
+const statusEl  = document.getElementById('status');
+const saveBtn   = document.getElementById('save-btn');
+const restoreBtn= document.getElementById('restore-btn');
+const selNameEl = document.getElementById('sel-name');
+const paletteEl = document.getElementById('palette');
+
+const vCtx = vpEl.getContext('2d');
+const mCtx = mmEl.getContext('2d');
+vCtx.imageSmoothingEnabled = false;
+mCtx.imageSmoothingEnabled = false;
+
+/* ================================================================
+   Map-Zugriff – WORLD.MAP Chunk-Format
+   
+   64 Chunks à 32x32 Tiles (1024 Bytes), ROW-MAJOR:
+     chunk = (y/32) * 8 + (x/32)
+   Innerhalb des Chunks: row-major  tile_y * 32 + tile_x
+   
+   Quelle: xu4 maploader.cpp
+     for(ych = 0; ych < 8; ych++)        ← äußere Schleife = Zeilen
+       for(xch = 0; xch < 8; xch++)      ← innere Schleife = Spalten
+   ================================================================ */
+
+function getTile(x, y) {
+  x = ((x % 256) + 256) % 256;
+  y = ((y % 256) + 256) % 256;
+  const chunk = ((y >> 5) * 8 + (x >> 5));
+  return mapBytes[chunk * 1024 + (y & 31) * 32 + (x & 31)];
+}
+
+function setTile(x, y, t) {
+  x = ((x % 256) + 256) % 256;
+  y = ((y % 256) + 256) % 256;
+  const chunk = ((y >> 5) * 8 + (x >> 5));
+  mapBytes[chunk * 1024 + (y & 31) * 32 + (x & 31)] = t;
+}
+
+/* ================================================================
+   VGA-Dekodierung  (shapes.vga + u4vga.pal)
+   256 Bytes/Tile, 16x16 Pixel, 1 Byte/Pixel (8-Bit indexed)
+   Palette: 256 × RGB, je 6-Bit VGA (0-63) → 8-Bit (×255/63)
+   ================================================================ */
+
+function decodeTiles(shapes, palRaw) {
+  // Palette aufbauen: 6-Bit → 8-Bit
+  const pal = new Uint8Array(256 * 3);
+  for (let i = 0; i < 256; i++) {
+    pal[i*3]   = Math.round(palRaw[i*3]   * 255 / 63);
+    pal[i*3+1] = Math.round(palRaw[i*3+1] * 255 / 63);
+    pal[i*3+2] = Math.round(palRaw[i*3+2] * 255 / 63);
+  }
+  for (let i = 0; i < 256; i++) {
+    const c = document.createElement('canvas');
+    c.width = 16; c.height = 16;
+    const ctx = c.getContext('2d');
+    const img = ctx.createImageData(16, 16);
+    const d = img.data, base = i * 256;
+    for (let row = 0; row < 16; row++) {
+      for (let col = 0; col < 16; col++) {
+        const ci = shapes[base + row * 16 + col];
+        const p = (row * 16 + col) * 4;
+        d[p]   = pal[ci*3];
+        d[p+1] = pal[ci*3+1];
+        d[p+2] = pal[ci*3+2];
+        d[p+3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    tiles[i] = c;
+  }
+}
+
+/* ================================================================
+   Rendering
+   ================================================================ */
+
+function renderViewport() {
+  for (let ty = 0; ty < 32; ty++) {
+    for (let tx = 0; tx < 32; tx++) {
+      const t = getTile(viewX + tx, viewY + ty);
+      vCtx.drawImage(tiles[t] || tiles[0], tx * 16, ty * 16);
+    }
+  }
+}
+
+function renderOneAt(wx, wy) {
+  const t = getTile(wx, wy);
+  const [r, g, b] = MM_COLORS[t];
+  mCtx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+  mCtx.fillRect(wx, wy, 1, 1);
+  const tx = ((wx - viewX) % 256 + 256) % 256;
+  const ty = ((wy - viewY) % 256 + 256) % 256;
+  if (tx < 32 && ty < 32) vCtx.drawImage(tiles[t] || tiles[0], tx * 16, ty * 16);
+}
+
+function renderMinimap() {
+  const img = mCtx.createImageData(256, 256);
+  const d = img.data;
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const t = getTile(x, y);
+      const [r, g, b] = MM_COLORS[t];
+      const p = (y * 256 + x) * 4;
+      d[p]=r; d[p+1]=g; d[p+2]=b; d[p+3]=255;
+    }
+  }
+  mCtx.putImageData(img, 0, 0);
+  updateMmRect();
+}
+
+function updateMmRect() {
+  mmRect.style.left = viewX + 'px';
+  mmRect.style.top  = viewY + 'px';
+}
+
+/* ================================================================
+   Viewport-Interaktion
+   ================================================================ */
+
+function vpCoords(e) {
+  const r = vpEl.getBoundingClientRect();
+  const px = (e.clientX - r.left) * (512 / r.width);
+  const py = (e.clientY - r.top)  * (512 / r.height);
+  return {
+    wx: ((viewX + (px / 16 | 0)) % 256 + 256) % 256,
+    wy: ((viewY + (py / 16 | 0)) % 256 + 256) % 256,
+  };
+}
+
+function paintAt(e) {
+  const { wx, wy } = vpCoords(e);
+  if (getTile(wx, wy) === selTile) return;
+  setTile(wx, wy, selTile);
+  renderOneAt(wx, wy);
+  setDirty(true);
+}
+
+function pickAt(e) {
+  const { wx, wy } = vpCoords(e);
+  selectTile(getTile(wx, wy));
+}
+
+function updateInfo(e) {
+  const { wx, wy } = vpCoords(e);
+  const t = getTile(wx, wy);
+  vpInfo.textContent = 'x:' + wx + ' y:' + wy + ' | ' + t + ' ' + TILE_NAMES[t];
+}
+
+vpEl.addEventListener('mousedown', function(e) {
+  if (e.button === 2) { e.preventDefault(); pickAt(e); return; }
+  if (e.button === 0) { painting = true; paintAt(e); }
+});
+vpEl.addEventListener('mousemove', function(e) {
+  updateInfo(e);
+  if (painting && (e.buttons & 1)) paintAt(e);
+});
+vpEl.addEventListener('mouseup',    function() { painting = false; });
+vpEl.addEventListener('mouseleave', function() { painting = false; });
+vpEl.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+/* ================================================================
+   Minimap-Navigation
+   ================================================================ */
+
+mmEl.addEventListener('click', function(e) {
+  const r = mmEl.getBoundingClientRect();
+  const mx = Math.floor((e.clientX - r.left) * 256 / r.width);
+  const my = Math.floor((e.clientY - r.top)  * 256 / r.height);
+  viewX = (mx - 16 + 256) % 256;
+  viewY = (my - 16 + 256) % 256;
+  updateMmRect();
+  renderViewport();
+});
+
+/* ================================================================
+   Tastatur
+   ================================================================ */
+
+document.addEventListener('keydown', function(e) {
+  const step = e.shiftKey ? 8 : 1;
+  let moved = true;
+  switch (e.key) {
+    case 'ArrowLeft':  viewX = (viewX - step + 256) % 256; break;
+    case 'ArrowRight': viewX = (viewX + step)        % 256; break;
+    case 'ArrowUp':    viewY = (viewY - step + 256) % 256; break;
+    case 'ArrowDown':  viewY = (viewY + step)        % 256; break;
+    default: moved = false;
+  }
+  if (moved) { e.preventDefault(); updateMmRect(); renderViewport(); }
+});
+
+/* ================================================================
+   Tile-Palette  (alle 256 Tiles)
+   ================================================================ */
+
+function selectTile(id) {
+  selTile = id;
+  selNameEl.textContent = TILE_NAMES[id] + ' (' + id + ')';
+  document.querySelectorAll('.pal-btn').forEach(function(b) {
+    b.classList.toggle('sel', +b.dataset.id === id);
+  });
+}
+
+function buildPalette() {
+  paletteEl.innerHTML = '';
+  for (let i = 0; i < 256; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'pal-btn' + (i === selTile ? ' sel' : '');
+    btn.dataset.id = i;
+    btn.title = i + ': ' + TILE_NAMES[i];
+
+    const c = document.createElement('canvas');
+    c.width = 16; c.height = 16;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(tiles[i], 0, 0, 16, 16);
+
+    const lbl = document.createTextNode(i);
+
+    btn.appendChild(c);
+    btn.appendChild(lbl);
+    btn.addEventListener('click', function() { selectTile(i); });
+    paletteEl.appendChild(btn);
+  }
+}
+
+/* ================================================================
+   Speichern / Wiederherstellen
+   ================================================================ */
+
+function setDirty(val) {
+  dirty = val;
+  statusEl.className = val ? 'dirty' : '';
+  statusEl.textContent = val ? 'Ungespeichert' : 'Gespeichert';
+  saveBtn.disabled = !val;
+}
+
+saveBtn.addEventListener('click', async function() {
+  saveBtn.disabled = true;
+  statusEl.textContent = 'Speichere...';
+  try {
+    const res = await fetch('api/map', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: mapBytes,
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(function() { return {}; });
+      throw new Error(j.error || 'HTTP ' + res.status);
+    }
+    setDirty(false);
+    restoreBtn.disabled = false;
+    statusEl.textContent = 'Gespeichert – Spiel mit Strg+Umschalt+R neu laden';
+  } catch (err) {
+    alert('Fehler beim Speichern: ' + err.message);
+    setDirty(true);
+  }
+});
+
+restoreBtn.addEventListener('click', async function() {
+  if (!confirm('WORLD.MAP aus dem Backup wiederherstellen?\nAlle Aenderungen gehen verloren.')) return;
+  restoreBtn.disabled = true;
+  try {
+    const res = await fetch('api/map/restore', { method: 'POST' });
+    if (!res.ok) {
+      const j = await res.json().catch(function() { return {}; });
+      throw new Error(j.error || 'HTTP ' + res.status);
+    }
+    const mapRes = await fetch('api/map');
+    mapBytes = new Uint8Array(await mapRes.arrayBuffer());
+    renderMinimap();
+    renderViewport();
+    setDirty(false);
+    statusEl.textContent = 'Backup wiederhergestellt';
+  } catch (err) {
+    alert('Fehler: ' + err.message);
+    restoreBtn.disabled = false;
+  }
+});
+
+/* ================================================================
+   Initialisierung
+   ================================================================ */
+
+async function init() {
+  const me = await fetch('api/me').then(r => r.ok ? r.json() : null).catch(() => null);
+  if (!me || !me.user) {
+    showLogin();
+    return;
+  }
+  document.getElementById('login-screen').classList.add('hidden');
+
+  try {
+    const [mapRes, shapesRes, palRes, bakRes] = await Promise.all([
+      fetch('api/map'),
+      fetch('api/shapes'),
+      fetch('api/shapespal'),
+      fetch('api/mapbackup'),
+    ]);
+    if (!mapRes.ok)    throw new Error('WORLD.MAP konnte nicht geladen werden (HTTP ' + mapRes.status + ').');
+    if (!shapesRes.ok) throw new Error('shapes.vga konnte nicht geladen werden (HTTP ' + shapesRes.status + ').');
+    if (!palRes.ok)    throw new Error('u4vga.pal konnte nicht geladen werden (HTTP ' + palRes.status + ').');
+
+    mapBytes = new Uint8Array(await mapRes.arrayBuffer());
+    const shapesBytes = new Uint8Array(await shapesRes.arrayBuffer());
+    const palBytes    = new Uint8Array(await palRes.arrayBuffer());
+
+    decodeTiles(shapesBytes, palBytes);
+    buildPalette();
+    renderMinimap();
+    renderViewport();
+
+    if (bakRes.ok) {
+      const j = await bakRes.json().catch(function() { return {}; });
+      restoreBtn.disabled = !j.exists;
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('editor').style.display  = 'flex';
+    statusEl.textContent = 'Bereit';
+    saveBtn.disabled = true;
+
+  } catch (err) {
+    document.getElementById('loading').textContent = 'Fehler: ' + err.message;
+    statusEl.textContent = 'Fehler';
+  }
+}
+
+function showLogin() {
+  const screen = document.getElementById('login-screen');
+  screen.classList.remove('hidden');
+  document.getElementById('login-user').focus();
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const err = document.getElementById('login-error');
+    btn.disabled = true;
+    err.hidden = true;
+    try {
+      const res = await fetch('api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('login-user').value.trim(),
+          password: document.getElementById('login-pass').value,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Anmeldung fehlgeschlagen.');
+      location.reload();
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.hidden = false;
+      btn.disabled = false;
+    }
+  }, { once: true });
+}
+
+init();
+</script>
+</body>
+</html>

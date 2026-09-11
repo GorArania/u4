@@ -127,6 +127,16 @@
   async function startEngine() {
     var FS = Module.FS;
     try { FS.mkdir('/save'); } catch (e) {}
+    // Persoenliche Map des Benutzers laden (ueberschreibt WORLD.MAP aus u4.data)
+    try {
+      var mapRes = await fetch('api/map', { cache: 'no-store' });
+      if (mapRes.ok) {
+        var mapBytes = new Uint8Array(await mapRes.arrayBuffer());
+        if (mapBytes.length === 65536) {
+          FS.writeFile('/ultima4/WORLD.MAP', mapBytes);
+        }
+      }
+    } catch (e) { console.warn('Map laden fehlgeschlagen:', e); }
     // Serverstand in /save wiederherstellen
     try {
       var res = await fetch('api/save');

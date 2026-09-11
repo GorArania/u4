@@ -4,5 +4,5 @@
 RewriteEngine On
 # Nötig, weil dieses Verzeichnis per Alias unter /ultima4 eingebunden ist.
 # Bei anderem URL-Pfad entsprechend anpassen.
-RewriteBase /ultima4/
+RewriteBase /Ultima4/public/
 RewriteRule ^api/(.+)$ api.php?r=$1 [QSA,L]

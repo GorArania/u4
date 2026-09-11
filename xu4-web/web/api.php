@@ -47,6 +47,11 @@ function db() {
             data       BLOB NOT NULL,
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         )");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS user_maps (
+            user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            worldmap   BLOB NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )");
     }
     return $pdo;
 }
@@ -182,6 +187,34 @@ if ($route === 'save' && $method === 'DELETE') {
     $user = require_auth();
     db()->prepare('DELETE FROM saves WHERE user_id = ?')->execute(array($user['id']));
     json_out(array('ok' => true));
+}
+
+// ----------------------------------------- Persoenliche Map des Benutzers
+define('U4DATA',          __DIR__ . '/u4.data');
+define('U4_WORLDMAP_OFF', 11200748);
+
+function u4data_read_worldmap() {
+    $fh = fopen(U4DATA, 'rb');
+    if (!$fh) return false;
+    fseek($fh, U4_WORLDMAP_OFF);
+    $data = fread($fh, 65536);
+    fclose($fh);
+    return $data;
+}
+
+// GET api/map – liefert die persoenliche Map des Benutzers (oder Original)
+if ($route === 'map' && $method === 'GET') {
+    $user = require_auth();
+    $stmt = db()->prepare('SELECT worldmap FROM user_maps WHERE user_id = ?');
+    $stmt->execute(array($user['id']));
+    $row  = $stmt->fetch(PDO::FETCH_ASSOC);
+    $data = $row ? $row['worldmap'] : u4data_read_worldmap();
+    if ($data === false) { http_response_code(500); exit; }
+    header('Content-Type: application/octet-stream');
+    header('Cache-Control: no-store');
+    header('Content-Length: ' . strlen($data));
+    echo $data;
+    exit;
 }
 
 fail('Unbekannter API-Pfad.', 404);

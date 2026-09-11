@@ -1,0 +1,16 @@
+# Verzeichnislisting deaktivieren
+Options -Indexes
+
+# Weiterleitung zur Spielseite
+DirectoryIndex /ultima4/
+RedirectMatch ^/Ultima4/?$ /ultima4/
+
+# Git-Metadaten nicht ausliefern. Ohne diese Sperre ist .git/config und
+# damit die komplette Repo-Historie oeffentlich abrufbar.
+RedirectMatch 404 ^/Ultima4/\.git(/|$)
+
+# Originale Ultima-IV-DOS-Dateien nicht ausliefern. Sie sind zwar gratis
+# verteilbar, aber urheberrechtlich geschuetzt. Das Spiel liest sie aus
+# u4.data, und die PHP-Endpunkte greifen direkt aufs Dateisystem zu --
+# ueber HTTP braucht sie niemand.
+RedirectMatch 404 ^/Ultima4/game(/|$)
