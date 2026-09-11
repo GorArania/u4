@@ -36,5 +36,8 @@ cp -r "$XU4"/graphics/* "$DATA/graphics/" 2>/dev/null || true
 cp "$XU4"/mid/*.mid "$DATA/mid/" 2>/dev/null; cp "$XU4"/mid/*.ogg "$DATA/mid/" 2>/dev/null || true
 cp "$XU4"/sound/* "$DATA/sound/" 2>/dev/null || true
 
+# Bekannte Datenkorrekturen anwenden (z. B. Hawkwind-Gespraech)
+python3 "$(dirname "$0")/patch-gamedata.py"
+
 echo "Daten zusammengestellt unter $DATA"
 du -sh "$DATA"

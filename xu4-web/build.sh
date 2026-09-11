@@ -10,7 +10,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SRC="$(cd "$HERE/../xu4/src" && pwd)"
-OUTDIR="$HERE/web"
+OUTDIR="${OUTDIR:-$HERE/web}"   # zum Testen ueberschreibbar, ohne die Live-Dateien anzufassen
 LIBXML2_WASM="${LIBXML2_WASM:-/opt/libxml2-wasm}"
 BUILD="${BUILD:-/tmp/xu4build}"
 DATA="$HERE/dist/data"
@@ -49,7 +49,9 @@ for f in $C_SRCS; do
 done
 
 echo "LINK u4.js"
-emcc "$BUILD"/*.o "$BUILD"/lzw/*.o "$LIBXML2_WASM/lib/libxml2.a" \
+# em++ statt emcc: ab Emscripten 4.x wird libc++ beim Linken nicht mehr
+# automatisch dazugeholt, sonst fehlen operator new/delete und std::string.
+em++ "$BUILD"/*.o "$BUILD"/lzw/*.o "$LIBXML2_WASM/lib/libxml2.a" \
   $LDFLAGS --preload-file "$DATA@/" -o "$OUTDIR/u4.js"
 
 echo "Fertig: $OUTDIR/u4.{js,wasm,data}"
