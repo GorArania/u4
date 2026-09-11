@@ -140,6 +140,8 @@ int personInit() {
 bool Person::canConverse() const {
     return 
         isVendor() ||
+        npcType == NPC_LORD_BRITISH ||
+        npcType == NPC_HAWKWIND ||
         dialogue != NULL;
 }
 

@@ -1079,7 +1079,10 @@ void CombatController::attack() {
 
     bool foundTarget = false;
     int targetDistance = path.size();
-    Coords targetCoords = path[path.size() - 1];
+    /* the path is empty when the very first tile already blocks the attack
+       (e.g. the mast or the wheel during a shipboard battle) -- never index
+       past the front of the vector */
+    Coords targetCoords = path.empty() ? attacker->getCoords() : path[path.size() - 1];
 
     int distance = 1;
     for (vector<Coords>::iterator i = path.begin(); i != path.end(); i++) {
@@ -1100,14 +1103,17 @@ void CombatController::attack() {
     }
 
     // does weapon leaves a tile behind? (e.g. flaming oil)
+    // bei leerem Pfad ist targetCoords das Feld des Angreifers selbst -- dann
+    // darf hier nichts abgelegt werden, sonst brennt man sich selbst an
     const Tile *ground = map->tileTypeAt(targetCoords, WITHOUT_OBJECTS);
-    if (!weapon->leavesTile().empty() && ground->isWalkable() &&
+    if (!path.empty() && !weapon->leavesTile().empty() && ground->isWalkable() &&
         (!foundTarget || targetDistance == range))
-        map->annotations->add(path[path.size() - 1], map->tileset->getByName(weapon->leavesTile())->id);
+        map->annotations->add(targetCoords, map->tileset->getByName(weapon->leavesTile())->id);
 
     /* show the 'miss' tile */
     if (!foundTarget) {
-        attackFlash(targetCoords, weapon->getMissTile(), 3);
+        if (!path.empty())
+            attackFlash(targetCoords, weapon->getMissTile(), 3);
         soundPlay(SOUND_MISSED, false);
 
         /* This goes here so messages are shown in the original order */
