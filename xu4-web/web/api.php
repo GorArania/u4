@@ -190,16 +190,49 @@ if ($route === 'save' && $method === 'DELETE') {
 }
 
 // ----------------------------------------- Persoenliche Map des Benutzers
-define('U4DATA',          __DIR__ . '/u4.data');
-define('U4_WORLDMAP_OFF', 11200748);
+define('U4DATA', __DIR__ . '/u4.data');
+define('U4JS',   __DIR__ . '/u4.js');
 
+/**
+ * Liest Start und Ende einer eingebetteten Datei aus den Paket-Metadaten in
+ * u4.js. Emscriptens file_packager schreibt dort fuer jede der Dateien in
+ * u4.data ein {filename:"...",start:N,end:M}.
+ *
+ * Der Offset stand hier frueher fest verdrahtet. Das geht still kaputt,
+ * sobald die Engine neu gebaut wird und sich im Paket eine Datei davor in der
+ * Groesse aendert -- api/map liefert dann 64 KB Muell als Weltkarte, und zwar
+ * nur an Benutzer ohne eigenen Eintrag in user_maps. Jetzt kommt die Wahrheit
+ * aus derselben Quelle, die auch der Browser benutzt.
+ */
+function u4data_extent($packagePath) {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = array();
+        $js = @file_get_contents(U4JS);
+        if ($js !== false && preg_match_all(
+                '/\{filename:"([^"]+)",start:(\d+),end:(\d+)\}/', $js, $m, PREG_SET_ORDER)) {
+            foreach ($m as $f) $cache[$f[1]] = array((int) $f[2], (int) $f[3]);
+        }
+    }
+    return isset($cache[$packagePath]) ? $cache[$packagePath] : null;
+}
+
+/**
+ * Originale Weltkarte aus u4.data. Gibt false zurueck, wenn die Datei fehlt
+ * oder nicht 65536 Bytes gross ist -- falsche Bytes waeren schlimmer als ein
+ * Fehler, denn das Spiel schreibt sie ungeprueft als WORLD.MAP.
+ */
 function u4data_read_worldmap() {
+    $ext = u4data_extent('/ultima4/WORLD.MAP');
+    if ($ext === null) return false;
+    list($start, $end) = $ext;
+    if ($end - $start !== 65536) return false;
     $fh = fopen(U4DATA, 'rb');
     if (!$fh) return false;
-    fseek($fh, U4_WORLDMAP_OFF);
+    fseek($fh, $start);
     $data = fread($fh, 65536);
     fclose($fh);
-    return $data;
+    return (strlen($data) === 65536) ? $data : false;
 }
 
 // GET api/map – liefert die persoenliche Map des Benutzers (oder Original)

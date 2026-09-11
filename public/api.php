@@ -382,28 +382,54 @@ if ($route === 'save' && $method === 'DELETE') {
 
 // ---------------------------------------------------------------- Karten-Editor
 
-// u4.data: Emscripten-Bundle des xu4-Spiels. Offsets aus u4.js-Metadaten.
-define('U4DATA',          '/var/www/html/Ultima4/xu4-web/web/u4.data');
-define('U4_WORLDMAP_OFF', 11200748);   // /ultima4/WORLD.MAP  (65536 Bytes)
-define('U4_UPGRADE_OFF',   7840943);   // /u4upgrad.zip Start
-define('U4_UPGRADE_END',   9068647);   // /u4upgrad.zip Ende
+// u4.data: Emscripten-Bundle des xu4-Spiels.
+define('U4DATA', '/var/www/html/Ultima4/xu4-web/web/u4.data');
+define('U4JS',   '/var/www/html/Ultima4/xu4-web/web/u4.js');
 
-function u4data_read($offset, $length) {
-    $fh = fopen(U4DATA, 'rb');
-    if (!$fh) fail('u4.data nicht lesbar.', 500);
-    fseek($fh, $offset);
-    $data = fread($fh, $length);
-    fclose($fh);
-    return $data;
+/**
+ * Liest Start und Ende einer eingebetteten Datei aus den Paket-Metadaten in
+ * u4.js. Emscriptens file_packager schreibt dort fuer jede der Dateien in
+ * u4.data ein {filename:"...",start:N,end:M}.
+ *
+ * Diese Offsets standen hier frueher fest verdrahtet. Das geht still kaputt,
+ * sobald die Engine neu gebaut wird und sich im Paket eine Datei davor in der
+ * Groesse aendert -- api/map liefert dann 64 KB Muell als Weltkarte, und zwar
+ * nur an Benutzer ohne eigenen Eintrag in user_maps. Jetzt kommt die Wahrheit
+ * aus derselben Quelle, die auch der Browser benutzt.
+ */
+function u4data_extent($packagePath) {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = array();
+        $js = @file_get_contents(U4JS);
+        if ($js !== false && preg_match_all(
+                '/\{filename:"([^"]+)",start:(\d+),end:(\d+)\}/', $js, $m, PREG_SET_ORDER)) {
+            foreach ($m as $f) $cache[$f[1]] = array((int) $f[2], (int) $f[3]);
+        }
+    }
+    return isset($cache[$packagePath]) ? $cache[$packagePath] : null;
 }
 
-function u4data_write($offset, $data, $length) {
-    $fh = fopen(U4DATA, 'r+b');
-    if (!$fh) fail('u4.data nicht beschreibbar.', 500);
-    fseek($fh, $offset);
-    $written = fwrite($fh, $data, $length);
+/**
+ * Liefert den Inhalt einer Datei aus u4.data. $expectedLength, falls
+ * angegeben, muss exakt passen -- sonst stimmt etwas am Paket nicht, und ein
+ * Fehler ist besser als falsche Bytes.
+ */
+function u4data_read_file($packagePath, $expectedLength = null) {
+    $ext = u4data_extent($packagePath);
+    if ($ext === null) fail('Datei ' . $packagePath . ' nicht in u4.data gefunden.', 500);
+    list($start, $end) = $ext;
+    $length = $end - $start;
+    if ($expectedLength !== null && $length !== $expectedLength) {
+        fail(sprintf('%s hat %d Bytes, erwartet %d.', $packagePath, $length, $expectedLength), 500);
+    }
+    $fh = fopen(U4DATA, 'rb');
+    if (!$fh) fail('u4.data nicht lesbar.', 500);
+    fseek($fh, $start);
+    $data = fread($fh, $length);
     fclose($fh);
-    if ($written !== $length) fail('Schreiben in u4.data fehlgeschlagen.', 500);
+    if (strlen($data) !== $length) fail('u4.data unvollstaendig gelesen.', 500);
+    return $data;
 }
 
 // Extrahiert shapes.vga und u4vga.pal aus dem Upgrade-ZIP und cached sie.
@@ -411,7 +437,7 @@ function ensure_vga_files() {
     $shapesVga = GAME_DIR . '/shapes.vga';
     $vgaPal    = GAME_DIR . '/u4vga.pal';
     if (file_exists($shapesVga) && file_exists($vgaPal)) return;
-    $zipData = u4data_read(U4_UPGRADE_OFF, U4_UPGRADE_END - U4_UPGRADE_OFF);
+    $zipData = u4data_read_file('/u4upgrad.zip');
     $tmpZip  = tempnam(sys_get_temp_dir(), 'u4upg');
     file_put_contents($tmpZip, $zipData);
     $zip = new ZipArchive();
@@ -427,7 +453,7 @@ if ($route === 'map' && $method === 'GET') {
     $stmt = db()->prepare('SELECT worldmap FROM user_maps WHERE user_id = ?');
     $stmt->execute(array($user['id']));
     $row  = $stmt->fetch(PDO::FETCH_ASSOC);
-    $data = $row ? $row['worldmap'] : u4data_read(U4_WORLDMAP_OFF, 65536);
+    $data = $row ? $row['worldmap'] : u4data_read_file('/ultima4/WORLD.MAP', 65536);
     header('Content-Type: application/octet-stream');
     header('Cache-Control: no-store');
     header('Content-Length: ' . strlen($data));
