@@ -260,6 +260,43 @@
     btn.addEventListener('click', function () { sendKey(SPECIAL[btn.getAttribute('data-key')]); });
   });
 
+  // ------------------------------------------------------------- Vollbild
+  // Der Knopf wird nur freigeschaltet, wo die Fullscreen-API existiert.
+  // iPhone-Safari kann ausser <video> keine Elemente in den Vollbildmodus
+  // schalten -- dort bliebe er wirkungslos und wird gar nicht erst gezeigt.
+  // (iPad-Safari kennt die API mit webkit-Präfix.)
+  var fsBtn = document.getElementById('fullscreen-btn');
+  var fsRoot = document.documentElement;
+  var fsRequest = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;
+  var fsExit = document.exitFullscreen || document.webkitExitFullscreen;
+  var fsActive = function () {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  };
+  if (fsBtn && fsRequest && fsExit &&
+      (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
+    var syncFullscreen = function () {
+      var on = !!fsActive();
+      fsBtn.classList.toggle('is-on', on);
+      fsBtn.title = on ? 'Vollbild beenden' : 'Vollbild';
+      fsBtn.setAttribute('aria-label', fsBtn.title);
+    };
+    fsBtn.addEventListener('click', function () {
+      var result = fsActive()
+        ? fsExit.call(document)
+        : fsRequest.call(fsRoot, { navigationUI: 'hide' });
+      // Ältere WebKit-Varianten liefern kein Promise zurück.
+      if (result && result.catch) {
+        result.catch(function (e) { console.warn('Vollbild nicht möglich:', e); });
+      }
+    });
+    // Auch das Verlassen per Zurück-Geste oder Systemtaste soll das Symbol
+    // umschalten, nicht nur der eigene Knopf.
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    document.addEventListener('webkitfullscreenchange', syncFullscreen);
+    syncFullscreen();
+    fsBtn.hidden = false;
+  }
+
   // ------------------------------------------- QWERTZ-Tastatur aufbauen
   var XU4 = {
     A:'Angriff', B:'Besteigen', C:'Zauber', D:'Hinab',
